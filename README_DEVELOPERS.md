@@ -31,7 +31,7 @@ Before starting, you need to have an existing, working Amazon Q application. If 
 Navigate into the project root directory and, in a bash shell, run:
 
 1. `./init.sh` - checks your system dependendencies for required packages (see Dependencies above), sets up your environment file, and bootstraps your cdk environment.
-2. `./deploy.sh` - runs the cdk build and deploys or updates a stack in your AWS account, creates a slack app manifest file, and outputs value that you'll need in the next section:
+2. `./deploy.sh` - runs the cdk build and deploys or updates a stack in your AWS account, and outputs value that you'll need in the next section:
 - url for EventHandler API endpoint  
 - link to the AWS Secrets Manager secret
 
@@ -63,8 +63,8 @@ That's it! There's just one step.
 When completed, it displays the CloudFormation templates S3 URLs and 1-click URLs for launching the stack creation in CloudFormation console, e.g.:
 ```
 OUTPUTS
-Template URL: https://s3.us-east-1.amazonaws.com/yourbucketbasename-us-east-1/qslack-test/AmazonQSlackGateway.json
-CF Launch URL: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://s3.us-east-1.amazonaws.com/yourbucketbasename-us-east-1/qslack-test/AmazonQSlackGateway.json&stackName=AMAZON-Q-SLACK-GATEWAY
+Template URL: https://s3.us-east-1.amazonaws.com/yourbucketbasename-us-east-1/qteams-test/AmazonQTeamsGateway.json
+CF Launch URL: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://s3.us-east-1.amazonaws.com/yourbucketbasename-us-east-1/qteams-test/AmazonQTeamsGateway.json&stackName=AMAZON-Q-TEAMS-GATEWAY
 Done
 ``````
 
