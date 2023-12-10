@@ -9,5 +9,4 @@ dist
 .idea
 cdk-outputs.json
 environment.json*
-slack-manifest-output.json
 build

@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-**Important:** Bug reports submitted here should relate specifically to the open source sample amazon-q-slack-gateway project. Do not submit bugs related to the Amazon Q service itself.  
+**Important:** Bug reports submitted here should relate specifically to the open source sample amazon-q-teams-gateway project. Do not submit bugs related to the Amazon Q service itself.  
 If your issue relates to Amazon Q setup, user provisioning, document ingestion, accuracy, or other aspects of the service, then first check the Amazon Q documentation, and then reproduce the problem using the Amazon Q console web experience before engaging AWS support directly. Thank you.  
 
 **Describe the bug**

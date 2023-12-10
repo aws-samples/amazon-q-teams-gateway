@@ -1,6 +1,6 @@
 # Developer README
 
-The main README is here: [Slack gateway for Amazon Q, your business expert (preview)](./README.md)
+The main README is here: [Microsoft Teams gateway for Amazon Q, your business expert (preview)](./README.md)
 
 This Developer README describes how to build the project from the source code - for developer types. You can:
 - [Deploy the solution](#deploy-the-solution)
@@ -19,8 +19,8 @@ To deploy or to publish, you need to have the following packages installed on yo
 7. cdk (AWS CDK): https://docs.aws.amazon.com/cdk/v2/guide/cli.html
 
 Copy the GitHub repo to your computer. Either:
-- use the git command: git clone https://github.com/aws-samples/amazon-q-slack-gateway.git
-- OR, download and expand the ZIP file from the GitHub page: https://github.com/aws-samples/amazon-q-slack-gateway/archive/refs/heads/main.zip
+- use the git command: git clone https://github.com/aws-samples/amazon-q-teams-gateway.git
+- OR, download and expand the ZIP file from the GitHub page: https://github.com/aws-samples/amazon-q-teams-gateway/archive/refs/heads/main.zip
 
 ## Deploy the solution
 
@@ -31,52 +31,16 @@ Before starting, you need to have an existing, working Amazon Q application. If 
 Navigate into the project root directory and, in a bash shell, run:
 
 1. `./init.sh` - checks your system dependendencies for required packages (see Dependencies above), sets up your environment file, and bootstraps your cdk environment.
-2. `./deploy.sh` - runs the cdk build and deploys or updates a stack in your AWS account, creates a slack app manifest file, and outputs a link to the AWS Secrets Manager secret that you will need below.
+2. `./deploy.sh` - runs the cdk build and deploys or updates a stack in your AWS account, creates a slack app manifest file, and outputs value that you'll need in the next section:
+- url for EventHandler API endpoint  
+- link to the AWS Secrets Manager secret
 
-### 3. Configure your Slack application
+### 3. Configure your Teams application
 
-#### 3.2 Create your app
+Refer to [README](./README.md#2-configure-your-teams-bot-application)
 
-Now you can create your app in Slack!
 
-1. Create a Slack app: https://api.slack.com/apps from the generated manifest `./slack-manifest-output.json` (copy / paste)
-2. Go to `App Home`, scroll down to the section `Show Tabs` and enable `Message Tab` then check the box `Allow users to send Slash commands and messages from the messages tab` - This is a required step to enable your user to send messages to your app
-
-#### 3.3 Add your app in your workspace
-
-Let's now add your app into your workspace, this is required to generate the `Bot User OAuth Token` value that will be needed in the next step
-
-1. Go to OAuth & Permissions (in api.slack.com) and click `Install to Workspace`, this will generate the OAuth token
-2. In Slack, go to your workspace
-2. Click on your workspace name > Settings & administration > Manage apps
-3. Click on your newly created app
-4. In the right pane, click on "Open in App Directory"
-5. Click "Open in Slack"
-
-### 4. Configure your Secrets in AWS
-
-Let's configure your Slack secrets in order to (1) verify the signature of each request, (2) post on behalf of your bot
-
-> **IMPORTANT**
-> In this example we are not enabling Slack token rotation. Enable it for a production app by implementing
-> rotation via AWS Secrets Manager. 
-> Please create an issue (or, better yet, a pull request!) in this repo if you want this feature added to a future version.
-
-1. Login to your AWS console
-2. In your AWS account go to Secret manager, using the URL that was output by the `deploy.sh` script above. 
-3. Choose `Retrieve secret value`
-4. Choose `Edit`
-5. Replace the value of `Signing Secret` and `Bot User OAuth Token`, you will find those values in the Slack application configuration under `Basic Information` and `OAuth & Permissions`:
-
-### Say hello
-> Time to say Hi!
-
-1. Go to Slack
-2. Under Apps > Manage, add your new Amazon Q app
-3. Optionally add your app to team channels
-4. In the app DM channel, say *Hello*. In a team channel, ask it for help with an @mention.
-5. Enjoy.
-
+***NOT YET COMPLETE BELOW**
 
 ## Publish the solution
 
