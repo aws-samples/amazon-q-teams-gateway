@@ -1,0 +1,137 @@
+import * as cdk from 'aws-cdk-lib';
+import { CfnOutput } from 'aws-cdk-lib';
+import { Duration } from 'aws-cdk-lib';
+import * as lambda from 'aws-cdk-lib/aws-lambda-nodejs';
+import { LambdaRestApi } from 'aws-cdk-lib/aws-apigateway';
+import { Construct } from 'constructs';
+import { Vpc } from 'aws-cdk-lib/aws-ec2';
+import { AttributeType, Table } from 'aws-cdk-lib/aws-dynamodb';
+import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
+
+import {
+  ManagedPolicy,
+  PolicyDocument,
+  PolicyStatement,
+  Role,
+  ServicePrincipal
+} from 'aws-cdk-lib/aws-iam';
+import { StackEnvironment } from '../bin/my-amazon-q-teams-bot';
+
+import * as fs from 'fs';
+const packageJson = fs.readFileSync('package.json', 'utf-8');
+const version = JSON.parse(packageJson).version;
+const STACK_DESCRIPTION = `Amazon Q Teams Gateway - v${version}`;
+
+export class MyAmazonQTeamsBotStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props: cdk.StackProps, env: StackEnvironment) {
+    super(scope, id, {
+      ...props,
+      description: STACK_DESCRIPTION
+    });
+
+    // Reference the AWS::StackName directly
+    const refStackName = cdk.Fn.ref('AWS::StackName');
+
+    const vpc = new Vpc(this, `${props.stackName}-VPC`);
+
+    const initialSecretContent = JSON.stringify({
+      MicrosoftAppId: '<Replace with AppId>',
+      MicrosoftAppPassword: '<Replace with AppClientSecret>'
+    });
+    const teamsSecret = new Secret(this, `${props.stackName}-Secret`, {
+      secretName: `${refStackName}-Secret`,
+      secretStringValue: cdk.SecretValue.unsafePlainText(initialSecretContent)
+    });
+    // Output URL to the secret in the AWS Management Console
+    new CfnOutput(this, 'TeamsSecretConsoleUrl', {
+      value: `https://${this.region}.console.aws.amazon.com/secretsmanager/secret?name=${teamsSecret.secretName}&region=${this.region}`,
+      description: 'Click to edit the secrets in the AWS Secrets Manager console'
+    });
+
+    const dynamoCache = new Table(this, `${props.stackName}-DynamoCache`, {
+      tableName: `${refStackName}-channels-metadata`,
+      partitionKey: {
+        name: 'channel',
+        type: AttributeType.STRING
+      },
+      timeToLiveAttribute: 'expireAt',
+      removalPolicy: cdk.RemovalPolicy.DESTROY
+    });
+
+    const messageMetadata = new Table(this, `${props.stackName}-MessageMetadata`, {
+      tableName: `${refStackName}-responses-metadata`,
+      partitionKey: {
+        name: 'messageId',
+        type: AttributeType.STRING
+      },
+      timeToLiveAttribute: 'expireAt',
+      removalPolicy: cdk.RemovalPolicy.DESTROY
+    });
+
+    [
+      {
+        handler: 'teams-event-handler',
+        id: 'TeamsEventHandler',
+        description: 'Handler for Teams events'
+      }
+    ].map((p) => {
+      const prefix = `${props.stackName}-${p.id}`;
+      new LambdaRestApi(this, `${prefix}-Api`, {
+        // Keep dynamic description (with date) to ensure api is deployed on update to new template
+        description: `${p.description}, Revision: ${new Date().toISOString()})`,
+        deploy: true,
+        handler: new lambda.NodejsFunction(this, `${prefix}-Fn`, {
+          functionName: `${refStackName}-${p.id}`,
+          entry: `src/functions/${p.handler}.ts`,
+          handler: `handler`,
+          description: `${p.description}, Revision: ${new Date().toISOString()})`,
+          timeout: Duration.seconds(30),
+          environment: {
+            TEAMS_SECRET_NAME: teamsSecret.secretName,
+            AMAZON_Q_ENDPOINT: env.AmazonQEndpoint ?? '',
+            AMAZON_Q_REGION: env.AmazonQRegion,
+            AMAZON_Q_APP_ID: env.AmazonQAppId,
+            AMAZON_Q_USER_ID: env.AmazonQUserId ?? '',
+            CONTEXT_DAYS_TO_LIVE: env.ContextDaysToLive,
+            CACHE_TABLE_NAME: dynamoCache.tableName,
+            MESSAGE_METADATA_TABLE_NAME: messageMetadata.tableName
+          },
+          role: new Role(this, `${prefix}-Role`, {
+            assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+            managedPolicies: [
+              ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
+            ],
+            inlinePolicies: {
+              SecretManagerPolicy: new PolicyDocument({
+                statements: [
+                  new PolicyStatement({
+                    actions: ['secretsmanager:GetSecretValue'],
+                    resources: [teamsSecret.secretArn]
+                  })
+                ]
+              }),
+              DynamoDBPolicy: new PolicyDocument({
+                statements: [
+                  new PolicyStatement({
+                    actions: ['dynamodb:DeleteItem', 'dynamodb:PutItem', 'dynamodb:GetItem'],
+                    resources: [dynamoCache.tableArn, messageMetadata.tableArn]
+                  })
+                ]
+              }),
+              ChatPolicy: new PolicyDocument({
+                statements: [
+                  new PolicyStatement({
+                    actions: ['qbusiness:ChatSync', 'qbusiness:PutFeedback'],
+                    // parametrized
+                    resources: [`arn:aws:qbusiness:*:*:application/${env.AmazonQAppId}`]
+                  })
+                ]
+              })
+            }
+          }),
+          vpc
+        })
+      });
+    });
+  }
+}
