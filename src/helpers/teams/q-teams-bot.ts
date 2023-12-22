@@ -28,8 +28,8 @@ export class QTeamsBot extends ActivityHandler {
         context.activity.conversation.conversationType,
         context.activity.from.id,
         context.activity.channelData.tenant.id,
-        context.activity.channelData.team.id,
-        context.activity.channelData.channel.id,
+        context.activity.channelData?.team?.id,
+        context.activity.channelData?.channel?.id,
         context.activity.timestamp
       );
       const channelMetadata = await getChannelMetadata(channelKey, env);
