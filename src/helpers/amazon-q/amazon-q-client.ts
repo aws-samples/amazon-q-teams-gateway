@@ -8,7 +8,7 @@ import { v4 as uuid } from 'uuid';
 const AWS = require('aws-sdk');
 const logger = makeLogger('amazon-q-client');
 
-export interface Attachment {
+export interface QAttachment {
   name: string;
   data: Buffer;
 }
@@ -87,7 +87,7 @@ const WARN_TRUNCATED = `| Please note that you do not have all the conversation 
 export const qChatSync = async (
   env: Env,
   message: string,
-  attachments: Attachment[],
+  attachments: QAttachment[],
   context?: {
     conversationId: string;
     parentMessageId: string;

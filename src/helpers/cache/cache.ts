@@ -17,15 +17,6 @@ export const putItem = async (args: AWS.DynamoDB.DocumentClient.PutItemInput) =>
 export const getItem = async (args: AWS.DynamoDB.DocumentClient.GetItemInput) =>
   await client.get(args).promise();
 
-export const getChannelKey = (
-  type: string,
-  from: string,
-  tenant: string,
-  team?: string,
-  channel?: string,
-  timestamp?: Date
-) => (type === 'personal' ? `${from}:${tenant}` : `${team}:${channel}:${timestamp}`);
-
 const expireAt = (env: Env) => {
   const contextTTL = Number(env.CONTEXT_DAYS_TO_LIVE) * 24 * 60 * 60 * 1000; // milliseconds
   return Math.floor((Date.now() + contextTTL) / 1000); // Unix time (seconds);
