@@ -2,9 +2,8 @@ import axios from 'axios';
 import { ActivityHandler, MessageFactory, Attachment } from 'botbuilder';
 import { getEnv } from '@src/utils';
 import { makeLogger } from '@src/logging';
-import { isEmpty } from '@src/utils';
+import { isEmpty, getTeamsSecret } from '@src/utils';
 const logger = makeLogger('q-teams-bot');
-
 import { qChatSync, QAttachment } from '@src/helpers/amazon-q/amazon-q-client';
 import {
   getChannelMetadata,
@@ -12,8 +11,8 @@ import {
   deleteChannelMetadata,
   saveMessageMetadata
 } from '@src/helpers/cache/cache';
-
 export const ERROR_MSG = '***Processing error***';
+let oathToken = '';
 
 //const MAX_FILE_ATTACHMENTS = 5;
 const SUPPORTED_FILE_TYPES = [
@@ -72,11 +71,55 @@ export const retrieveAttachment = async (url: string) => {
   return response.data;
 };
 
+async function getOathToken(tenantId: string): Promise<string> {
+  const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+  const params = new URLSearchParams();
+  const teamsSecret = await getTeamsSecret();
+  params.append('client_id', teamsSecret.MicrosoftAppId);
+  params.append('client_secret', teamsSecret.MicrosoftAppPassword);
+  params.append('scope', 'https://graph.microsoft.com/.default');
+  params.append('grant_type', 'client_credentials');
+  try {
+    const response = await axios.post(url, params.toString(), {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+    return response.data.access_token;
+  } catch (error) {
+    console.error('Error getting OAuth token', error);
+    throw error;
+  }
+}
+
+async function retrieveThreadHistory(
+  teamId: string,
+  channelId: string,
+  threadId: string,
+  oathToken: string
+) {
+  const url = `https://graph.microsoft.com/v1.0/teams/${teamId}/channels/${channelId}/messages/${threadId}/replies`;
+  try {
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${oathToken}` }
+    });
+    return response.data.value;
+  } catch (error) {
+    logger.error('Error fetching messages:', error);
+    logger.debug(`curl -X GET '${url}' -H 'Accept: application/json, text/plain, */*'   -H 'Authorization: Bearer ${oathToken}'`);
+    throw error;
+  }
+}
+
 export class QTeamsBot extends ActivityHandler {
   constructor() {
     super();
     // See https://aka.ms/about-bot-activity-message to learn more about the message and other activity types.
     this.onMessage(async (context) => {
+      const tenantId = context.activity.conversation.tenantId;
+      if (isEmpty(oathToken) && !isEmpty(tenantId)) {
+        oathToken = await getOathToken(tenantId);
+      }
       const env = getEnv(process.env);
       logger.debug(`Context: ${JSON.stringify(context)}`);
       const activity = context.activity;
@@ -88,20 +131,25 @@ export class QTeamsBot extends ActivityHandler {
 
       // We cache previous Amazon Q context metadata for personal DM channel
       let channelKey = '';
-      let qContext = { conversationId: '', parentMessageId: '' };
+      let qContext = undefined;
+
+      // DM (personal) messages
       if (type === 'personal') {
         channelKey = `${activity.from.id}:${activity.channelData.tenant.id}`;
 
         // check if DM message is a reset (/new_conversation or /new_context) command
         if (message.startsWith('/new_con')) {
-          logger.debug(`Slash command: /new_conversation - deleting channel metadata for '${channelKey}'`);
+          logger.debug(
+            `Slash command: /new_conversation - deleting channel metadata for '${channelKey}'`
+          );
           await deleteChannelMetadata(channelKey, env);
           const replyText = `_*Starting New Conversation*_`;
           await context.sendActivity(MessageFactory.text(replyText, replyText));
           return;
         }
 
-        // not a reset command, so process the message
+        // it's not a reset command, so process the message
+        // get any cached context metadata
         const channelMetadata = await getChannelMetadata(channelKey, env);
         logger.debug(
           `ChannelKey: ${channelKey}, Cached channel metadata: ${JSON.stringify(channelMetadata)} `
@@ -115,10 +163,21 @@ export class QTeamsBot extends ActivityHandler {
           qAttachments.push(...(await attachFiles(activity.attachments)));
         }
       }
+      // Team channel message (@mention)
+      else if (type === 'channel') {
+        // we don't cache context metadata for For @mentions in a channel. We alway invoke AmazonQ with
+        // a new conversation context, which embeds the thread history in the input message.
+        // The thread history includes messages not previously seen by the bot.
 
-      // For at mentions in a channel, we don't cache metadata, since we need to always pull thread history
-      // which includes messages betwen other participants in the channel, not previously seen by the bot.
-      // TODO
+        const threadHistory = await retrieveThreadHistory(
+          activity.conversation.id,
+          activity.channelData.channel.id,
+          activity.conversation.id,
+          oathToken
+        );
+
+        logger.debug(`Thread history: ${JSON.stringify(threadHistory)}`);
+      }
 
       // call ChatSync API
       const output = await qChatSync(env, message, qAttachments, qContext);

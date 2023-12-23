@@ -1,9 +1,8 @@
 import 'source-map-support/register';
 import express from 'express';
 import serverless from 'serverless-http';
-import { SecretsManager } from 'aws-sdk';
 import { Context } from 'aws-lambda';
-import { isEmpty, getOrThrowIfEmpty } from '@src/utils';
+import { isEmpty, getTeamsSecret } from '@src/utils';
 import {
   CloudAdapter,
   ConfigurationBotFrameworkAuthentication,
@@ -13,21 +12,6 @@ import { QTeamsBot, ERROR_MSG } from '../helpers/teams/q-teams-bot';
 
 import { makeLogger } from '@src/logging';
 const logger = makeLogger('teams-event-handler');
-
-const getTeamsSecret = async () => {
-  const secretName = getOrThrowIfEmpty(process.env.TEAMS_SECRET_NAME);
-  logger.debug(`Getting secret value for SecretId ${secretName}`);
-  const secretManagerClient = new SecretsManager();
-  const secret = await secretManagerClient
-    .getSecretValue({
-      SecretId: secretName
-    })
-    .promise();
-  if (secret.SecretString === undefined) {
-    throw new Error('Missing SecretString');
-  }
-  return JSON.parse(secret.SecretString);
-};
 
 // We use serverless-http to emulate an http app server in Lambda
 // By making 'apphandler' a global, we can avoid initializing it every handler function invocation

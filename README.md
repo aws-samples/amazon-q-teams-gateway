@@ -72,14 +72,15 @@ When your CloudFormation stack status is CREATE_COMPLETE, choose the **Outputs**
 1. Go to the Azure Portal: https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade
 1. Choose **+ New registration**
     1. For **Name**, provide the name for your app. *Tip: Keep things simple by using the `Stack Name` you entered above.*
-    1. For **Who can use this application or access this API?**, choose **Accounts in any organizational directory (Any Microsoft Entra ID tenant 1. Multitenant)**
+    1. For **Who can use this application or access this API?**, choose **Accounts in this organizational directory only (AWS only - Single tenant)**
     1. Choose **Register**
-    1. *Note down the **Application (client) ID** value, from the **Overview** page. You'll need it later when asked for **MicrosoftAppId**.*
+    1. *Note down the **Application (client) ID** value, and the **Directory (tenant) ID** from the **Overview** page. You'll need them later when asked for **MicrosoftAppId** and **MicrosoftAppTenantId**.*
 1. In the **Select API permissions** page (on the left navigation menu)
     1. Choose **Add a permission**
     1. Choose **Microsoft Graph**
     1. Choose **Application permissions**
     1. Select **User.Read.All**
+    1. Select **ChannelMessage.Read.All**
     1. Choose **Add permissions**. *This permission allows the app to read data in your organization's directory about the signed in user.*
     1. Remove the original **User.Read - Delegated** permission (use the … menu on the right to choose **Remove permission**)
     1. Choose **✓ Grant admin consent for Default Directory**
@@ -97,13 +98,15 @@ When your CloudFormation stack status is CREATE_COMPLETE, choose the **Outputs**
 1. Go to the Microsoft Bot Framework: https://dev.botframework.com/bots/new
 1. (Optional) Create and upload a cool custom icon for your new Amazon Q Bot. Or, use this one that I created using [Amazon Bedrock image playgound](https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/image-playground?modelId=stability.stable-diffusion-xl-v1)!  
 <img src=./images/QBotIcon.png height=70 />
-1. Enter your prefered **Display name**, **Bot handle**, and **Long description**.
-1. For **Messaging endpoint** copy and paste the value of the `TeamsEventHandlerApiEndpoint` from your Stack outputs tab (from Step 1).  *Do not check Enable Streaming Endpoint*
-1. For **Paste your app ID below to continue**, enter the *MicrosoftAppId* value you noted above.
-1. Leave the other values as is, agree to the terms, and choose **Register**.
-1. On the **Channels** page, under **Add a featured channel** choose **Microsoft Teams** 
-1. Choose **Microsoft Teams Commercial (most common)**, and then **Save**.
-1. Agree to the Terms of Service and choose **Agree**
+1. Enter your prefered **Display name**, **Bot handle**, and **Long description**.  
+1. For **Messaging endpoint** copy and paste the value of the `TeamsEventHandlerApiEndpoint` from your Stack outputs tab (from Step 1).  *Do not check Enable Streaming Endpoint*.  
+1. For **App type**, choose `Single Tenant`.  
+1. For **Paste your app ID below to continue**, enter the *MicrosoftAppId* value you noted above. 
+1. For **App Tenant ID**, enter the *MicrosoftAppTenantId* value you noted above.
+1. Leave the other values as they are, agree to the terms, and choose **Register**.  
+1. On the **Channels** page, under **Add a featured channel** choose **Microsoft Teams**  
+1. Choose **Microsoft Teams Commercial (most common)**, and then **Save**.  
+1. Agree to the Terms of Service and choose **Agree**  
 
 ### 3. Configure your Secrets in AWS
 
@@ -118,7 +121,7 @@ Let's configure your App secrets in order to (1) verify the signature of each re
 2. In your AWS account go to Secret manager, using the URL shown in the stack output: `TeamsSecretConsoleUrl`.
 3. Choose `Retrieve secret value`
 4. Choose `Edit`
-5. Replace the value of `MicrosoftAppId` and `MicrosoftAppPassword` with the values you noted in the previous steps.
+5. Replace the value of `MicrosoftAppId`, `MicrosoftAppPassword`, and `MicrosoftAppTenantId` with the values you noted in the previous steps.
 6. Choose **Save**
 
 ### 4. Finally, deploy into Microsoft Teams
