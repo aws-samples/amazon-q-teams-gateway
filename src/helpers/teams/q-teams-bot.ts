@@ -9,6 +9,7 @@ import { qChatSync, QAttachment } from '@src/helpers/amazon-q/amazon-q-client';
 import {
   getChannelMetadata,
   saveChannelMetadata,
+  deleteChannelMetadata,
   saveMessageMetadata
 } from '@src/helpers/cache/cache';
 
@@ -90,6 +91,17 @@ export class QTeamsBot extends ActivityHandler {
       let qContext = { conversationId: '', parentMessageId: '' };
       if (type === 'personal') {
         channelKey = `${activity.from.id}:${activity.channelData.tenant.id}`;
+
+        // check if DM message is a reset (/new_conversation or /new_context) command
+        if (message.startsWith('/new_con')) {
+          logger.debug(`Slash command: /new_conversation - deleting channel metadata for '${channelKey}'`);
+          await deleteChannelMetadata(channelKey, env);
+          const replyText = `_*Starting New Conversation*_`;
+          await context.sendActivity(MessageFactory.text(replyText, replyText));
+          return;
+        }
+
+        // not a reset command, so process the message
         const channelMetadata = await getChannelMetadata(channelKey, env);
         logger.debug(
           `ChannelKey: ${channelKey}, Cached channel metadata: ${JSON.stringify(channelMetadata)} `
