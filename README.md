@@ -81,6 +81,8 @@ When your CloudFormation stack status is CREATE_COMPLETE, choose the **Outputs**
     1. Choose **Application permissions**
     1. Select **User.Read.All**
     1. Select **ChannelMessage.Read.All**
+    1. Select **Team.ReadBasic.All**
+    1. Select **Files.Read.All**
     1. Choose **Add permissions**. *This permission allows the app to read data in your organization's directory about the signed in user.*
     1. Remove the original **User.Read - Delegated** permission (use the … menu on the right to choose **Remove permission**)
     1. Choose **✓ Grant admin consent for Default Directory**

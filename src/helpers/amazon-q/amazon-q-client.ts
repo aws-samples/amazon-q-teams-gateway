@@ -81,9 +81,6 @@ export const getClient = (env: Env) => {
   return amazonQClient;
 };
 
-const AMAZON_Q_MSG_LIMIT = 7000;
-const WARN_TRUNCATED = `| Please note that you do not have all the conversation history due to limitation`;
-
 export const qChatSync = async (
   env: Env,
   message: string,
@@ -94,19 +91,14 @@ export const qChatSync = async (
   }
 ): Promise<AmazonQResponse | Error> => {
   try {
-    // Enforce max input message limit - may cause undesired side effects
-    // TODO consider 'smarter' truncating of number of chat history messages, etc. rather
-    // than simple input string truncation which may corrupt JSON formatting of message history
-    const inputMessage =
-      message.length > AMAZON_Q_MSG_LIMIT
-        ? message.slice(message.length + WARN_TRUNCATED.length - AMAZON_Q_MSG_LIMIT) +
-          WARN_TRUNCATED
-        : message;
+    // removed message and attachment limit checks, in favor
+    // of letting it fail and report expception to user if limits
+    // are exceeded.
     const input = {
       applicationId: env.AMAZON_Q_APP_ID,
       userId: env.AMAZON_Q_USER_ID,
       clientToken: uuid(),
-      userMessage: inputMessage,
+      userMessage: message,
       ...(attachments.length > 0 && { attachments }),
       ...context
     };
