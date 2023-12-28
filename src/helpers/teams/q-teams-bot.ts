@@ -42,7 +42,11 @@ const SUPPORTED_FILE_TYPES = [
   'pdf'
 ];
 
-const attachFiles = async (attachments: Attachment[], oathToken: string, teamId?: string): Promise<QAttachment[]> => {
+const attachFiles = async (
+  attachments: Attachment[],
+  oathToken: string,
+  teamId?: string
+): Promise<QAttachment[]> => {
   const qAttachments: QAttachment[] = [];
   for (const a of attachments) {
     // Process downloadable attachments
@@ -50,14 +54,15 @@ const attachFiles = async (attachments: Attachment[], oathToken: string, teamId?
     let downloadUrl = a?.content?.downloadUrl;
     if (isEmpty(downloadUrl)) {
       if (!isEmpty(a.contentUrl) && !isEmpty(teamId)) {
+        logger.debug(`Get download URL for attachment`);
         downloadUrl = await getDownloadUrl(a.contentUrl, oathToken, teamId);
       }
     }
     if (!isEmpty(downloadUrl)) {
       logger.debug(`Processing attachment: ${JSON.stringify(a)}`);
-      // Check if the file type is supported 
+      // Check if the file type is supported
       // Use name suffix, since retrieved channel messages have no fileType attribute
-      const fileType = a.name?.split(".").pop();
+      const fileType = a.name?.split('.').pop();
       if (!isEmpty(fileType) && SUPPORTED_FILE_TYPES.includes(fileType) && !isEmpty(a.name)) {
         qAttachments.push({
           name: a.name,
@@ -69,7 +74,7 @@ const attachFiles = async (attachments: Attachment[], oathToken: string, teamId?
         );
       }
     } else {
-      logger.error("Unable to get downloadUrl for attachment");
+      logger.error('Unable to get downloadUrl for attachment');
     }
   }
   return qAttachments;
@@ -83,13 +88,11 @@ async function getDownloadUrl(contentUrl: string, oathToken: string, teamId: str
   const path = url.pathname.split('/').slice(4).join('/');
   const attachmentUrl = `https://graph.microsoft.com/v1.0/groups/${teamId}/drive/root:/${path}`;
   const attachment = await getAPIResponse(attachmentUrl, oathToken);
-  return attachment["@microsoft.graph.downloadUrl"];
+  return attachment['@microsoft.graph.downloadUrl'];
 }
 
 export const retrieveAttachment = async (downloadUrl: string) => {
-  logger.debug(
-    `curl -X GET '${downloadUrl}'`
-  );
+  logger.debug(`curl -X GET '${downloadUrl}'`);
   const response = await axios.get(downloadUrl, {
     responseType: 'arraybuffer' // Important for handling binary files
   });
@@ -115,17 +118,16 @@ async function getOathToken(tenantId: string): Promise<string> {
   const cca = new ConfidentialClientApplication(msalConfig);
   const tokenRequest = {
     // Use .default to request the static permissions configured in the portal
-    scopes: ['https://graph.microsoft.com/.default'] 
+    scopes: ['https://graph.microsoft.com/.default']
   };
   try {
     const response = await cca.acquireTokenByClientCredential(tokenRequest);
-    return response?.accessToken || '' ;      
+    return response?.accessToken || '';
   } catch (error) {
-      console.error('Error acquiring token:', error);
-      throw error;
+    console.error('Error acquiring token:', error);
+    throw error;
   }
 }
-
 
 interface ThreadMessages {
   name: string;
@@ -173,6 +175,7 @@ async function retrieveThreadHistory(
   for (const m of fullThread) {
     const teamId = m.channelIdentity.teamId;
     if (!isEmpty(m?.attachments)) {
+      logger.debug(`Process attachments`);
       threadAttachments.push(...(await attachFiles(m.attachments, oathToken, teamId)));
     }
   }
