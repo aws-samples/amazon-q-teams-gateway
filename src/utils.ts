@@ -1,5 +1,9 @@
 /* eslint @typescript-eslint/no-explicit-any: "off" */
 
+import { SecretsManager } from 'aws-sdk';
+import { makeLogger } from '@src/logging';
+const logger = makeLogger('teams-event-handler');
+
 export const isEmpty = <T>(value: T | undefined, checkAttributes = false): value is undefined => {
   if (value === undefined || value === null) {
     return true;
@@ -47,5 +51,20 @@ export const getEnv = (env: NodeJS.ProcessEnv) => ({
   CACHE_TABLE_NAME: getOrThrowIfEmpty(env.CACHE_TABLE_NAME),
   MESSAGE_METADATA_TABLE_NAME: getOrThrowIfEmpty(env.MESSAGE_METADATA_TABLE_NAME)
 });
+
+export const getTeamsSecret = async () => {
+  const secretName = getOrThrowIfEmpty(process.env.TEAMS_SECRET_NAME);
+  logger.debug(`Getting secret value for SecretId ${secretName}`);
+  const secretManagerClient = new SecretsManager();
+  const secret = await secretManagerClient
+    .getSecretValue({
+      SecretId: secretName
+    })
+    .promise();
+  if (secret.SecretString === undefined) {
+    throw new Error('Missing SecretString');
+  }
+  return JSON.parse(secret.SecretString);
+};
 
 export type Env = ReturnType<typeof getEnv>;
