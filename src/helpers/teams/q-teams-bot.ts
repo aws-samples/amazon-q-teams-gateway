@@ -42,43 +42,60 @@ const SUPPORTED_FILE_TYPES = [
   'pdf'
 ];
 
-const attachFiles = async (attachments: Attachment[], oathToken: string): Promise<QAttachment[]> => {
+const attachFiles = async (attachments: Attachment[], oathToken: string, teamId?: string): Promise<QAttachment[]> => {
   const qAttachments: QAttachment[] = [];
   for (const a of attachments) {
     // Process downloadable attachments
     // DM messages have a signed downloadUrl, but retrieved channel messages have only unsigned contentUrl
-    const contentUrl = a?.content?.downloadUrl || a?.contentUrl;
-    if (!isEmpty(contentUrl)) {
+    let downloadUrl = a?.content?.downloadUrl;
+    if (isEmpty(downloadUrl)) {
+      if (!isEmpty(a.contentUrl) && !isEmpty(teamId)) {
+        downloadUrl = await getDownloadUrl(a.contentUrl, oathToken, teamId);
+      }
+    }
+    if (!isEmpty(downloadUrl)) {
       logger.debug(`Processing attachment: ${JSON.stringify(a)}`);
       // Check if the file type is supported 
-      // Use name suffix, since retrieved channel messages have not fileType attribute
+      // Use name suffix, since retrieved channel messages have no fileType attribute
       const fileType = a.name?.split(".").pop();
       if (!isEmpty(fileType) && SUPPORTED_FILE_TYPES.includes(fileType) && !isEmpty(a.name)) {
         qAttachments.push({
           name: a.name,
-          data: await retrieveAttachment(contentUrl, oathToken)
+          data: await retrieveAttachment(downloadUrl)
         });
       } else {
         logger.debug(
           `Ignoring file attachment with unsupported filetype '${fileType}' - not one of '${SUPPORTED_FILE_TYPES}'`
         );
       }
+    } else {
+      logger.error("Unable to get downloadUrl for attachment");
     }
   }
   return qAttachments;
 };
 
-export const retrieveAttachment = async (url: string, oathToken: string) => {
+// contentURL is not directly usable - app lacks permissions
+// get downloadurl from microsoft graph
+// see: https://github.com/microsoftgraph/msgraph-sdk-javascript/issues/200
+async function getDownloadUrl(contentUrl: string, oathToken: string, teamId: string) {
+  const url = new URL(contentUrl);
+  const path = url.pathname.split('/').slice(4).join('/');
+  const attachmentUrl = `https://graph.microsoft.com/v1.0/groups/${teamId}/drive/root:/${path}`;
+  const attachment = await getAPIResponse(attachmentUrl, oathToken);
+  return attachment["@microsoft.graph.downloadUrl"];
+}
+
+export const retrieveAttachment = async (downloadUrl: string) => {
   logger.debug(
-    `curl -X GET '${url}' -H 'Authorization: Bearer ${oathToken}'`
+    `curl -X GET '${downloadUrl}'`
   );
-  const response = await axios.get(url, {
-    headers: { Authorization: `Bearer ${oathToken}` },
+  const response = await axios.get(downloadUrl, {
     responseType: 'arraybuffer' // Important for handling binary files
   });
   // log just enough of the attachment content to validate file contents when troubleshooting.
   logger.debug(
-    `retrieveAttachment from ${url}:\nData: ${response.data
+    `retrieveAttachment from ${downloadUrl}:\nData: ${response.data
       .slice(0, 300)
       .toString()
       .replace(/\r?\n/g, '')}`
@@ -154,8 +171,9 @@ async function retrieveThreadHistory(
   // get attachments from thread history
   const threadAttachments: QAttachment[] = [];
   for (const m of fullThread) {
+    const teamId = m.channelIdentity.teamId;
     if (!isEmpty(m?.attachments)) {
-      threadAttachments.push(...(await attachFiles(m.attachments, oathToken)));
+      threadAttachments.push(...(await attachFiles(m.attachments, oathToken, teamId)));
     }
   }
   return [threadMessages, threadAttachments];
