@@ -7,8 +7,7 @@ import {
   Attachment,
   TeamsInfo,
   TeamDetails,
-  TurnContext,
-  ActivityTypes
+  TurnContext
 } from 'botbuilder';
 import { getEnv } from '@src/utils';
 import { makeLogger } from '@src/logging';
@@ -231,7 +230,7 @@ export class QTeamsBot extends ActivityHandler {
           );
           await deleteChannelMetadata(channelKey, env);
           const replyText = `_*Starting New Conversation*_`;
-          await context.sendActivity(MessageFactory.text(replyText, replyText));
+          await context.sendActivity(MessageFactory.text(replyText));
           return;
         }
 
@@ -273,21 +272,26 @@ export class QTeamsBot extends ActivityHandler {
         return;
       }
 
-      // Send typing indicator
-      logger.debug('Sending typing indicator');
-      await context.sendActivity({ type: ActivityTypes.Typing });
+      // Send Processing indicator
+      logger.debug('Sending Processing indicator');
+      const activityResponse = await context.sendActivity(MessageFactory.text(`*Processing...*`));
+      logger.debug(`Activity response: ${JSON.stringify(activityResponse)}`);
 
       // call ChatSync API
       const output = await qChatSync(env, qUserMessage, qAttachments, qContext);
       if (output instanceof Error) {
         const replyText = `${ERROR_MSG} : *${output.message}*`;
-        await context.sendActivity(MessageFactory.text(replyText, replyText));
+        await context.sendActivity(MessageFactory.text(replyText));
         return;
       }
 
       // return response to user
       const replyText = output.systemMessage;
-      await context.sendActivity(MessageFactory.text(replyText, replyText));
+      await context.sendActivity(MessageFactory.text(replyText));
+      // delete previous progress message
+      if (!isEmpty(activityResponse)) {
+        await context.deleteActivity(activityResponse.id);
+      }
 
       // save metadata from sucessful response
       if (type === 'personal') {
