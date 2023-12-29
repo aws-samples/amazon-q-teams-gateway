@@ -54,7 +54,12 @@ const attachFiles = async (
     if (isEmpty(downloadUrl)) {
       if (!isEmpty(a.contentUrl) && !isEmpty(teamId)) {
         logger.debug(`Get download URL for attachment`);
-        downloadUrl = await getDownloadUrl(a.contentUrl, oathToken, teamId);
+        try {
+          downloadUrl = await getDownloadUrl(a.contentUrl, oathToken, teamId);
+        }
+        catch (error) {
+          logger.error(`Error retrieving attachment downloadUrl.. skipping: ${error}`);
+        }
       }
     }
     if (!isEmpty(downloadUrl)) {
@@ -72,9 +77,7 @@ const attachFiles = async (
           `Ignoring file attachment with unsupported filetype '${fileType}' - not one of '${SUPPORTED_FILE_TYPES}'`
         );
       }
-    } else {
-      logger.error('Unable to get downloadUrl for attachment');
-    }
+    } 
   }
   return qAttachments;
 };
@@ -196,6 +199,16 @@ async function getAPIResponse(url: string, oathToken: string) {
   }
 }
 
+async function getEmailAddress(context: TurnContext): Promise<string | undefined> {
+  try {
+      const teamsUser = await TeamsInfo.getMember(context, context.activity.from.id);
+      return teamsUser.email;
+  } catch (error) {
+      console.error('Error getting user email:', error);
+      return undefined;
+  }
+}
+
 export class QTeamsBot extends ActivityHandler {
   constructor() {
     super();
@@ -214,6 +227,15 @@ export class QTeamsBot extends ActivityHandler {
       logger.info(`Message received: ${message}`);
       let qUserMessage = message;
       const qAttachments: QAttachment[] = [];
+
+      if (isEmpty(env.AMAZON_Q_USER_ID)) {
+        // Use Teams user email as Q UserId
+        const userEmail = await getEmailAddress(context);
+        env.AMAZON_Q_USER_ID = userEmail;
+        logger.debug(
+          `User's email (${userEmail}) used as Amazon Q userId, since AmazonQUserId is empty.`
+        );
+      }
 
       // We cache previous Amazon Q context metadata for personal DM channel
       let channelKey = '';
@@ -238,7 +260,7 @@ export class QTeamsBot extends ActivityHandler {
         // get any cached context metadata
         const channelMetadata = await getChannelMetadata(channelKey, env);
         logger.debug(
-          `ChannelKey: ${channelKey}, Cached channel metadata: ${JSON.stringify(channelMetadata)} `
+          `Cached channel metadata: channelKey: ${channelKey}, metadata: ${JSON.stringify(channelMetadata)} `
         );
         qContext = {
           conversationId: channelMetadata?.conversationId,
