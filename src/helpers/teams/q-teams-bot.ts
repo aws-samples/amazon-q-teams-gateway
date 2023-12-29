@@ -7,7 +7,11 @@ import {
   Attachment,
   TeamsInfo,
   TeamDetails,
-  TurnContext
+  TurnContext,
+  CardFactory,
+  HeroCard,
+  CardAction,
+  ActionTypes
 } from 'botbuilder';
 import { getEnv } from '@src/utils';
 import { makeLogger } from '@src/logging';
@@ -196,6 +200,27 @@ async function getAPIResponse(url: string, oathToken: string) {
   }
 }
 
+async function sendMessageWithButtons(context: TurnContext, messageText: string) {
+  const cardButtons: CardAction[] = [
+    {
+        type: ActionTypes.MessageBack,
+        title: 'View source(s)',
+        value: null,
+        text: 'viewSources'
+    }
+];
+
+const card = CardFactory.heroCard(
+    '',
+    messageText,
+    undefined,
+    cardButtons
+);
+
+const message = MessageFactory.attachment(card);
+await context.sendActivity(message);
+}
+
 export class QTeamsBot extends ActivityHandler {
   constructor() {
     super();
@@ -287,7 +312,8 @@ export class QTeamsBot extends ActivityHandler {
 
       // return response to user
       const replyText = output.systemMessage;
-      await context.sendActivity(MessageFactory.text(replyText));
+      await sendMessageWithButtons(context, replyText);
+      // await context.sendActivity(MessageFactory.text(replyText));
       // delete previous progress message
       if (!isEmpty(activityResponse)) {
         await context.deleteActivity(activityResponse.id);
