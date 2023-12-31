@@ -8,21 +8,23 @@ import {
   TeamsInfo,
   TeamDetails,
   TurnContext,
+  ActionTypes,
   CardFactory,
-  HeroCard,
   CardAction,
-  ActionTypes
+  TaskModuleResponse,
+  InvokeResponse
 } from 'botbuilder';
 import { getEnv } from '@src/utils';
 import { makeLogger } from '@src/logging';
 import { isEmpty, getTeamsSecret } from '@src/utils';
 const logger = makeLogger('q-teams-bot');
-import { qChatSync, QAttachment } from '@src/helpers/amazon-q/amazon-q-client';
+import { qChatSync, QAttachment, AmazonQResponse, SourceAttribution } from '@src/helpers/amazon-q/amazon-q-client';
 import {
   getChannelMetadata,
   saveChannelMetadata,
   deleteChannelMetadata,
-  saveMessageMetadata
+  saveMessageMetadata,
+  getMessageMetadata
 } from '@src/helpers/cache/cache';
 export const ERROR_MSG = '***Processing error***';
 let oathToken = '';
@@ -203,25 +205,104 @@ async function getAPIResponse(url: string, oathToken: string) {
   }
 }
 
-async function sendMessageWithButtons(context: TurnContext, messageText: string) {
-  const cardButtons: CardAction[] = [
-    {
-        type: ActionTypes.MessageBack,
-        title: 'View source(s)',
-        value: null,
-        text: 'viewSources'
-    }
-  ];
+async function sendMessageWithButtons(context: TurnContext, qResponse: AmazonQResponse) {
+  // send text response
+  await context.sendActivity(MessageFactory.text(qResponse.systemMessage));
 
+  // add buttons
+  const cardButtons: CardAction[] = []
+  // view sources
+  if (!isEmpty(qResponse.sourceAttributions)) {
+    cardButtons.push(
+      {
+        type: 'invoke',
+        title: 'View sources',
+        value: {
+          type: 'task/fetch',
+          action: 'ViewSources',
+          systemMessageId: qResponse.systemMessageId
+        },
+    });
+  }
+  // feedback buttons
+  [{action: 'ThumbsUp', label:'👍'}, {action: 'ThumbsDown', label:'👎'}].map((feedback) => {
+    cardButtons.push(
+      {
+        type: 'invoke',
+        title: feedback.label,
+        value: {
+          type: ActionTypes.ImBack,
+          action: feedback.action,
+          systemMessageId: qResponse.systemMessageId
+        },
+    });  
+  });
   const card = CardFactory.heroCard(
       '',
-      messageText,
+      '',
       undefined,
       cardButtons
   );
+  await context.sendActivity(MessageFactory.attachment(card));
+}
 
-  const message = MessageFactory.attachment(card);
-  await context.sendActivity(message);
+function sourcesMarkdown(sources: SourceAttribution[]) {
+  const md = [];
+  for (let i = 0; i < sources.length; i++) {
+    const source = sources[i];
+    if (!isEmpty(source.title)) {
+      if (!isEmpty(source.url)) {
+        md.push(`${i + 1}) Title: *[${source.title.trim()}](source.url)*`);
+      } else {
+        md.push(`${i + 1}) Title: *${source.title.trim()}*`);
+      }
+    }
+    md.push('---');
+    if (!isEmpty(source.snippet)) {
+      md.push(
+        source.snippet.trim()
+      );
+      md.push('---');
+    }
+  }
+  return md.join('\n') || 'No Sources found';
+};
+
+async function getSourceAttributions(sources: SourceAttribution[]) {
+  const card = {
+    contentType: 'application/vnd.microsoft.card.adaptive',
+    content: {
+        type: 'AdaptiveCard',
+        version: '1.3',
+        body: [
+          {
+            type: 'Container',
+            items: [
+                {
+                    type: 'TextBlock',
+                    text: sourcesMarkdown(sources),
+                    wrap: true,
+                    maxLines: 12
+                }
+            ],
+            style: 'emphasis',
+            height: 'stretch'
+          }
+        ]
+    }
+  };
+  const taskModuleResponse: TaskModuleResponse = {
+      task: {
+          type: 'continue',
+          value: {
+              title: 'Sources',
+              height: 700,
+              width: 500,
+              card: CardFactory.adaptiveCard(card)
+          }
+      }
+  };
+  return taskModuleResponse;
 }
 
 async function getEmailAddress(context: TurnContext): Promise<string | undefined> {
@@ -237,14 +318,14 @@ async function getEmailAddress(context: TurnContext): Promise<string | undefined
 export class QTeamsBot extends ActivityHandler {
   constructor() {
     super();
-    // See https://aka.ms/about-bot-activity-message to learn more about the message and other activity types.
+    // See https://aka.ms/about-bot-activity-message to learn more about activity types.
     this.onMessage(async (context) => {
       const tenantId = context.activity.conversation.tenantId;
       if (isEmpty(oathToken) && !isEmpty(tenantId)) {
         oathToken = await getOathToken(tenantId);
       }
       const env = getEnv(process.env);
-      logger.debug(`Context: ${JSON.stringify(context)}`);
+      logger.debug(`Message handler`);
       const activity = context.activity;
       const type = context.activity.conversation.conversationType;
 
@@ -333,8 +414,7 @@ export class QTeamsBot extends ActivityHandler {
       }
 
       // return response to user
-      const replyText = output.systemMessage;
-      await sendMessageWithButtons(context, replyText);
+      await sendMessageWithButtons(context, output);
       // await context.sendActivity(MessageFactory.text(replyText));
       // delete previous progress message
       if (!isEmpty(activityResponse)) {
@@ -346,6 +426,35 @@ export class QTeamsBot extends ActivityHandler {
         await saveChannelMetadata(channelKey, output.conversationId, output.systemMessageId, env);
       }
       await saveMessageMetadata(output, env);
+      return;
     });
+  }
+  protected async onInvokeActivity(context: TurnContext): Promise<InvokeResponse> {
+    logger.debug(`InvokeActivity handler`);
+    const data = context.activity.value.data || context.activity.value;
+    const action = data.action;
+    const systemMessageId = data.systemMessageId;
+    logger.debug(`Action: ${action}, systemMessageId: ${systemMessageId}`);
+    const env = getEnv(process.env);
+    if (action === 'ViewSources') {
+      const qResponse = await getMessageMetadata(systemMessageId, env) as AmazonQResponse;
+      const sources = qResponse?.sourceAttributions || [];
+      const response = await getSourceAttributions(sources);
+      return { status: 200, body: response };
+    }
+    if (
+      action === 'ThumbsUp' ||
+      action === 'ThumbsDown'
+    ) {
+      //await feedback(action, systemMessageId, env);
+      await context.sendActivity(MessageFactory.text(`Thank you for your feedback!`));
+      return { status: 200, body: {
+        task: {
+            type: 'continue'
+        }
+      }};
+    }
+    logger.error(`Action '${action}' not implemented`);
+    return { status: 200, body: `Error - Action '${action}' not implemented`};
   }
 }
