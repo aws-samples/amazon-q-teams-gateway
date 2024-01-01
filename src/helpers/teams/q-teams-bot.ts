@@ -47,6 +47,16 @@ const SUPPORTED_FILE_TYPES = [
   'pdf'
 ];
 
+async function getEmailAddress(context: TurnContext): Promise<string | undefined> {
+  try {
+      const teamsUser = await TeamsInfo.getMember(context, context.activity.from.id);
+      return teamsUser.email;
+  } catch (error) {
+      console.error('Error getting user email:', error);
+      return undefined;
+  }
+}
+
 const attachFiles = async (
   attachments: Attachment[],
   oathToken: string,
@@ -252,45 +262,33 @@ function sourcesMarkdown(sources: SourceAttribution[]) {
     const source = sources[i];
     if (!isEmpty(source.title)) {
       if (!isEmpty(source.url)) {
-        md.push(`${i + 1}) Title: *[${source.title.trim()}](source.url)*`);
+        md.push(`**${i + 1}). [${source.title.trim()}](${source.url})**`);
       } else {
-        md.push(`${i + 1}) Title: *${source.title.trim()}*`);
+        md.push(`**${i + 1}). ${source.title.trim()}**`);
       }
     }
-    md.push('---');
     if (!isEmpty(source.snippet)) {
       md.push(
-        source.snippet.trim()
+        source.snippet.trim().replaceAll('\n\n','\n')
       );
-      md.push('---');
     }
   }
-  return md.join('\n') || 'No Sources found';
+  return md.join('\n\n---\n') || 'No Sources found';
 };
 
 async function getSourceAttributions(sources: SourceAttribution[]) {
-  const card = {
-    contentType: 'application/vnd.microsoft.card.adaptive',
-    content: {
-        type: 'AdaptiveCard',
-        version: '1.3',
-        body: [
-          {
-            type: 'Container',
-            items: [
-                {
-                    type: 'TextBlock',
-                    text: sourcesMarkdown(sources),
-                    wrap: true,
-                    maxLines: 12
-                }
-            ],
-            style: 'emphasis',
-            height: 'stretch'
-          }
-        ]
-    }
-  };
+  const card = CardFactory.adaptiveCard({
+    type: 'AdaptiveCard',
+    version: '1.3',
+    body: [
+      {
+          type: 'TextBlock',
+          text: sourcesMarkdown(sources),
+          wrap: true,
+      }
+    ]
+  });
+  logger.debug(`Sources Card: ${JSON.stringify(card)}`);
   const taskModuleResponse: TaskModuleResponse = {
       task: {
           type: 'continue',
@@ -298,21 +296,11 @@ async function getSourceAttributions(sources: SourceAttribution[]) {
               title: 'Sources',
               height: 700,
               width: 500,
-              card: CardFactory.adaptiveCard(card)
+              card: card
           }
       }
   };
   return taskModuleResponse;
-}
-
-async function getEmailAddress(context: TurnContext): Promise<string | undefined> {
-  try {
-      const teamsUser = await TeamsInfo.getMember(context, context.activity.from.id);
-      return teamsUser.email;
-  } catch (error) {
-      console.error('Error getting user email:', error);
-      return undefined;
-  }
 }
 
 export class QTeamsBot extends ActivityHandler {
@@ -440,6 +428,7 @@ export class QTeamsBot extends ActivityHandler {
       const qResponse = await getMessageMetadata(systemMessageId, env) as AmazonQResponse;
       const sources = qResponse?.sourceAttributions || [];
       const response = await getSourceAttributions(sources);
+      logger.debug(`Response: ${JSON.stringify(response)}`);
       return { status: 200, body: response };
     }
     if (
