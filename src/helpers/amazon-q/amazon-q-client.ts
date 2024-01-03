@@ -123,8 +123,7 @@ export const qPutFeedbackRequest = async (
     messageId: string;
   },
   usefulness: 'USEFUL' | 'NOT_USEFUL',
-  reason: 'HELPFUL' | 'NOT_HELPFUL',
-  submittedAt: string
+  reason: 'HELPFUL' | 'NOT_HELPFUL'
 ): Promise<void> => {
   const input = {
     applicationId: env.AMAZON_Q_APP_ID,
@@ -133,7 +132,7 @@ export const qPutFeedbackRequest = async (
     messageUsefulness: {
       usefulness: usefulness,
       reason: reason,
-      submittedAt: Number(submittedAt)
+      submittedAt: Date.now()
     }
   };
 
