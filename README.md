@@ -16,20 +16,20 @@ TODO - Make video
 It's easy to deploy in your own AWS Account, and add to your own teams. We show you how below.
 
 ### Features
-- In DMs it responds to all messages **DONE**
-- Renders answers containing markdown - e.g. headings, lists, bold, italics, tables, etc. **(This works natively)**
+- In DMs it responds to all messages
+- Renders answers containing markdown - e.g. headings, lists, bold, italics, tables, etc.
 ---
-- In channels it responds only to @mentions, and always replies in thread **TODO**
-- Provides thumbs up / down buttons to track user sentiment and help improve performance over time **TODO**
-- Provides Source Attribution - see references to sources used by Amazon Q **TODO**
-- Aware of conversation context - it tracks the conversation and applies context **TODO**
-- Aware of multiple users - when it's tagged in a thread, it knows who said what, and when - so it can contribute in context and accurately summarize the thread when asked.  **TODO**
-- Process up to 5 attached files for document question answering, summaries, etc. **TODO**
-- Reset and start new conversation in DM channel by using `/new_conversation` **TODO**
+- In channels it responds only to @mentions, and always replies in thread.
+- Provides thumbs up / down buttons to track user sentiment and help improve performance over time.
+- Provides Source Attribution - see references to sources used by Amazon Q.
+- Aware of conversation context - it tracks the conversation and applies context.
+- Aware of multiple users - when it's tagged in a thread, it knows who said what, and when - so it can contribute in context and accurately summarize the thread when asked.
+- Process up to 5 attached files for document question answering, summaries, etc.
+- Reset and start new conversation in DM channel by using `/new_conversation`.
 
 This sample Amazon Q Teams application is provided as open source — use it as a starting point for your own solution, and help us make it better by contributing back fixes and features via GitHub pull requests. Explore the code, choose Watch to be notified of new releases, and check back for the latest  updates.
 
-![Teams Demo](./images/thread-demo.png)  #TODO
+![Teams Demo](./images/thread-demo.png)
 
 Follow the instructions below to deploy the project to your own AWS account and Teams, and start experimenting!
 
@@ -50,7 +50,7 @@ If you are a developer, and you want to build, deploy and/or publish the solutio
 1. Log into the [AWS console](https://console.aws.amazon.com/) if you are not already.
 2. Choose one of the **Launch Stack** buttons below for your desired AWS region to open the AWS CloudFormation console and create a new stack.
 4. Enter the following parameters:
-    1. `Stack Name`: Name your App, e.g. AMAZON-Q-SLACK-GATEWAY.
+    1. `Stack Name`: Name your App, e.g. AMAZON-Q-TEAMS-GATEWAY.
     2. `AmazonQAppId`: Your existing Amazon Q Application ID (copy from Amazon Q console). 
     3. `AmazonQRegion`: Choose the region where you created your Amazon Q Application.
     4. `AmazonQUserId`: (Optional) Amazon Q User ID email address (leave empty to use Slack users email as user Id) **REQUIRED CURRENTLY**
@@ -58,8 +58,8 @@ If you are a developer, and you want to build, deploy and/or publish the solutio
 
 Region | Easy Deploy Button | Template URL - use to upgrade existing stack to a new release
 --- | --- | ---
-N. Virginia (us-east-1) | TBD | TBD
-Oregon (us-west-2) | TBD | TBD
+N. Virginia (us-east-1) | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://s3.us-east-1.amazonaws.com/aws-ml-blog-us-east-1/artifacts/amazon-q-teams-gateway/AmazonQTeamsGateway.json&stackName=AMAZON-Q-TEAMS-GATEWAY) | https://s3.us-east-1.amazonaws.com/aws-ml-blog-us-east-1/artifacts/amazon-q-teams-gateway/AmazonQTeamsGateway.json
+Oregon (us-west-2) | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-west-2.console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?templateURL=https://s3.us-west-2.amazonaws.com/aws-ml-blog-us-west-2/artifacts/amazon-q-teams-gateway/AmazonQTeamsGateway.json&stackName=AMAZON-Q-TEAMS-GATEWAY) | https://s3.us-west-2.amazonaws.com/aws-ml-blog-us-west-2/artifacts/amazon-q-teams-gateway/AmazonQTeamsGateway.json
 
 
 When your CloudFormation stack status is CREATE_COMPLETE, choose the **Outputs** tab, and keep it open - you'll need it below.
@@ -72,14 +72,17 @@ When your CloudFormation stack status is CREATE_COMPLETE, choose the **Outputs**
 1. Go to the Azure Portal: https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade
 1. Choose **+ New registration**
     1. For **Name**, provide the name for your app. *Tip: Keep things simple by using the `Stack Name` you entered above.*
-    1. For **Who can use this application or access this API?**, choose **Accounts in any organizational directory (Any Microsoft Entra ID tenant 1. Multitenant)**
+    1. For **Who can use this application or access this API?**, choose **Accounts in this organizational directory only (AWS only - Single tenant)**
     1. Choose **Register**
-    1. *Note down the **Application (client) ID** value, from the **Overview** page. You'll need it later when asked for **MicrosoftAppId**.*
+    1. *Note down the **Application (client) ID** value, and the **Directory (tenant) ID** from the **Overview** page. You'll need them later when asked for **MicrosoftAppId** and **MicrosoftAppTenantId**.*
 1. In the **Select API permissions** page (on the left navigation menu)
     1. Choose **Add a permission**
     1. Choose **Microsoft Graph**
     1. Choose **Application permissions**
     1. Select **User.Read.All**
+    1. Select **ChannelMessage.Read.All**
+    1. Select **Team.ReadBasic.All**
+    1. Select **Files.Read.All**
     1. Choose **Add permissions**. *This permission allows the app to read data in your organization's directory about the signed in user.*
     1. Remove the original **User.Read - Delegated** permission (use the … menu on the right to choose **Remove permission**)
     1. Choose **✓ Grant admin consent for Default Directory**
@@ -97,13 +100,15 @@ When your CloudFormation stack status is CREATE_COMPLETE, choose the **Outputs**
 1. Go to the Microsoft Bot Framework: https://dev.botframework.com/bots/new
 1. (Optional) Create and upload a cool custom icon for your new Amazon Q Bot. Or, use this one that I created using [Amazon Bedrock image playgound](https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/image-playground?modelId=stability.stable-diffusion-xl-v1)!  
 <img src=./images/QBotIcon.png height=70 />
-1. Enter your prefered **Display name**, **Bot handle**, and **Long description**.
-1. For **Messaging endpoint** copy and paste the value of the `TeamsEventHandlerApiEndpoint` from your Stack outputs tab (from Step 1).  *Do not check Enable Streaming Endpoint*
-1. For **Paste your app ID below to continue**, enter the *MicrosoftAppId* value you noted above.
-1. Leave the other values as is, agree to the terms, and choose **Register**.
-1. On the **Channels** page, under **Add a featured channel** choose **Microsoft Teams** 
-1. Choose **Microsoft Teams Commercial (most common)**, and then **Save**.
-1. Agree to the Terms of Service and choose **Agree**
+1. Enter your prefered **Display name**, **Bot handle**, and **Long description**.  
+1. For **Messaging endpoint** copy and paste the value of the `TeamsEventHandlerApiEndpoint` from your Stack outputs tab (from Step 1).  *Do not check Enable Streaming Endpoint*.  
+1. For **App type**, choose `Single Tenant`.  
+1. For **Paste your app ID below to continue**, enter the *MicrosoftAppId* value you noted above. 
+1. For **App Tenant ID**, enter the *MicrosoftAppTenantId* value you noted above.
+1. Leave the other values as they are, agree to the terms, and choose **Register**.  
+1. On the **Channels** page, under **Add a featured channel** choose **Microsoft Teams**  
+1. Choose **Microsoft Teams Commercial (most common)**, and then **Save**.  
+1. Agree to the Terms of Service and choose **Agree**  
 
 ### 3. Configure your Secrets in AWS
 
@@ -118,7 +123,7 @@ Let's configure your App secrets in order to (1) verify the signature of each re
 2. In your AWS account go to Secret manager, using the URL shown in the stack output: `TeamsSecretConsoleUrl`.
 3. Choose `Retrieve secret value`
 4. Choose `Edit`
-5. Replace the value of `MicrosoftAppId` and `MicrosoftAppPassword` with the values you noted in the previous steps.
+5. Replace the value of `MicrosoftAppId`, `MicrosoftAppPassword`, and `MicrosoftAppTenantId` with the values you noted in the previous steps.
 6. Choose **Save**
 
 ### 4. Finally, deploy into Microsoft Teams
@@ -151,10 +156,10 @@ And, now, at least, you can test your bot in Microsoft Teams!
 ### Say hello
 > Time to say Hi!
 
-1. Go to Slack
-2. Under Apps > Manage, add your new Amazon Q app
-3. Optionally add your app to team channels
-4. In the app DM channel, say *Hello*. In a team channel, ask it for help with an @mention.
+1. Go to Teams
+2. Under Apps add your new Amazon Q app to a Chat 
+3. Optionally add your app to one or more Team channels
+4. In the app DM chat, say *Hello*. In a team channel, ask it for help with an @mention.
 5. Enjoy.
 
 ## Contributing, and reporting issues

@@ -36,7 +36,9 @@ export class MyAmazonQTeamsBotStack extends cdk.Stack {
 
     const initialSecretContent = JSON.stringify({
       MicrosoftAppId: '<Replace with AppId>',
-      MicrosoftAppPassword: '<Replace with AppClientSecret>'
+      MicrosoftAppPassword: '<Replace with AppClientSecret>',
+      MicrosoftAppTenantId: '<Replace with TenantId>',
+      MicrosoftAppType: 'SingleTenant'
     });
     const teamsSecret = new Secret(this, `${props.stackName}-Secret`, {
       secretName: `${refStackName}-Secret`,
