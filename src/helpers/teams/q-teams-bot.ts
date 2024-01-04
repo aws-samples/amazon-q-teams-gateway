@@ -316,6 +316,10 @@ async function getSourceAttributions(sources: SourceAttribution[]) {
   return taskModuleResponse;
 }
 
+function delay(milliseconds: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
 export class QTeamsBot extends ActivityHandler {
   constructor() {
     super();
@@ -408,14 +412,6 @@ export class QTeamsBot extends ActivityHandler {
         return;
       }
 
-      // NOTE: it is possible to include response and buttons in a single card message, but
-      // support for markdown in cards is limited.. headings / tables do not render correctly
-      // So we'll create buttons in a separate message
-      const cardActivity = await getButtonActivity(qResponse);
-      logger.debug(`CardActivity: ${JSON.stringify(cardActivity)}`);
-      logger.debug(`Sending Message with card / buttons`);
-      await context.sendActivity(cardActivity);
-
       // return Amazon Q response to user by updating the first ('Processing...') message
       const updatedMessage = MessageFactory.text(qResponse.systemMessage);
       if (!isEmpty(messageResponse)) {
@@ -424,7 +420,16 @@ export class QTeamsBot extends ActivityHandler {
       logger.debug(
         `Replace 'Processing...' message with Amazon Q Response: ${JSON.stringify(updatedMessage)}`
       );
-      await context.updateActivity(updatedMessage);
+      await context.updateActivity(updatedMessage); 
+
+      // NOTE: it is possible to include response and buttons in a single card message, but
+      // support for markdown in cards is limited.. headings / tables do not render correctly
+      // So we'll create buttons in a separate message
+      const cardActivity = await getButtonActivity(qResponse);
+      logger.debug(`CardActivity: ${JSON.stringify(cardActivity)}`);
+      logger.debug(`Sending Message with card / buttons`);
+      await delay(2000); // slight delay to avoid client refresh issue.
+      await context.sendActivity(cardActivity);
 
       // save metadata from sucessful response
       if (type === 'personal') {
