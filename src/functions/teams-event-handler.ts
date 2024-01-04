@@ -41,7 +41,6 @@ const init_apphandler = async () => {
     adapter.process(req, res, async (context) => {
       logger.debug(`Bot Context: ${JSON.stringify(context)}`);
       await qBot.run(context);
-      res.send('OK');
     });
   });
   return serverless(app);
@@ -59,5 +58,7 @@ export const handler = async (
     logger.debug(`Initializing serverless apphandler`);
     apphandler = await init_apphandler();
   }
-  return await apphandler(event, context);
+  const response = await apphandler(event, context);
+  logger.debug(`EVENT response: ${JSON.stringify(response)}`);
+  return response;
 };

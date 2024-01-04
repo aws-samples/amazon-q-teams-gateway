@@ -7,20 +7,34 @@ import {
   Attachment,
   TeamsInfo,
   TeamDetails,
-  TurnContext
+  TurnContext,
+  ActionTypes,
+  CardFactory,
+  CardAction,
+  TaskModuleResponse,
+  InvokeResponse
 } from 'botbuilder';
 import { getEnv } from '@src/utils';
 import { makeLogger } from '@src/logging';
 import { isEmpty, getTeamsSecret } from '@src/utils';
 const logger = makeLogger('q-teams-bot');
-import { qChatSync, QAttachment } from '@src/helpers/amazon-q/amazon-q-client';
+import {
+  qChatSync,
+  qPutFeedbackRequest,
+  QAttachment,
+  AmazonQResponse,
+  SourceAttribution
+} from '@src/helpers/amazon-q/amazon-q-client';
 import {
   getChannelMetadata,
   saveChannelMetadata,
   deleteChannelMetadata,
-  saveMessageMetadata
+  saveMessageMetadata,
+  getMessageMetadata
 } from '@src/helpers/cache/cache';
 export const ERROR_MSG = '***Processing error***';
+const PROCESSING_MSG = '*Processing...*';
+const FEEDBACK_ACK_MSG = '*Thank you for your feedback!*';
 let oathToken = '';
 
 const SUPPORTED_FILE_TYPES = [
@@ -41,6 +55,28 @@ const SUPPORTED_FILE_TYPES = [
   'pdf'
 ];
 
+async function setAmazonQUserId(context: TurnContext, userId: string | undefined) {
+  if (isEmpty(userId)) {
+    // Use Teams user email as Q UserId
+    const userEmail = await getEmailAddress(context);
+    logger.debug(
+      `User's email (${userEmail}) used as Amazon Q userId, since AmazonQUserId is empty.`
+    );
+    return userEmail;
+  }
+  return userId;
+}
+
+async function getEmailAddress(context: TurnContext): Promise<string | undefined> {
+  try {
+    const teamsUser = await TeamsInfo.getMember(context, context.activity.from.id);
+    return teamsUser.email;
+  } catch (error) {
+    console.error('Error getting user email:', error);
+    return undefined;
+  }
+}
+
 const attachFiles = async (
   attachments: Attachment[],
   oathToken: string,
@@ -56,8 +92,7 @@ const attachFiles = async (
         logger.debug(`Get download URL for attachment`);
         try {
           downloadUrl = await getDownloadUrl(a.contentUrl, oathToken, teamId);
-        }
-        catch (error) {
+        } catch (error) {
           logger.error(`Error retrieving attachment downloadUrl.. skipping: ${error}`);
         }
       }
@@ -77,7 +112,7 @@ const attachFiles = async (
           `Ignoring file attachment with unsupported filetype '${fileType}' - not one of '${SUPPORTED_FILE_TYPES}'`
         );
       }
-    } 
+    }
   }
   return qAttachments;
 };
@@ -166,11 +201,14 @@ async function retrieveThreadHistory(
   // build conversation history JSON
   const threadMessages = [];
   for (const m of fullThread) {
-    threadMessages.push({
-      name: m.from?.user?.displayName || m.from?.application?.displayName || '',
-      message: htmlToText(m.body.content),
-      date: m.createdDateTime
-    });
+    const message = htmlToText(m.body.content);
+    if (!isEmpty(message) && message !== FEEDBACK_ACK_MSG) {
+      threadMessages.push({
+        name: m.from?.user?.displayName || m.from?.application?.displayName || '',
+        message: message,
+        date: m.createdDateTime
+      });
+    }
   }
   // get attachments from thread history
   const threadAttachments: QAttachment[] = [];
@@ -199,27 +237,100 @@ async function getAPIResponse(url: string, oathToken: string) {
   }
 }
 
-async function getEmailAddress(context: TurnContext): Promise<string | undefined> {
-  try {
-      const teamsUser = await TeamsInfo.getMember(context, context.activity.from.id);
-      return teamsUser.email;
-  } catch (error) {
-      console.error('Error getting user email:', error);
-      return undefined;
+async function getButtonActivity(qResponse: AmazonQResponse) {
+  // add buttons
+  const cardButtons: CardAction[] = [];
+  // view sources
+  if (!isEmpty(qResponse.sourceAttributions)) {
+    cardButtons.push({
+      type: 'invoke',
+      title: 'View sources',
+      value: {
+        type: 'task/fetch',
+        action: 'ViewSources',
+        systemMessageId: qResponse.systemMessageId
+      }
+    });
   }
+  // feedback buttons
+  [
+    { action: 'ThumbsUp', label: '👍' },
+    { action: 'ThumbsDown', label: '👎' }
+  ].map((feedback) => {
+    cardButtons.push({
+      type: 'invoke',
+      title: feedback.label,
+      value: {
+        type: ActionTypes.ImBack,
+        action: feedback.action,
+        systemMessageId: qResponse.systemMessageId
+      }
+    });
+  });
+  const card = CardFactory.heroCard('', '', undefined, cardButtons);
+  return MessageFactory.attachment(card);
+}
+
+function sourcesMarkdown(sources: SourceAttribution[]) {
+  const md = [];
+  for (let i = 0; i < sources.length; i++) {
+    const source = sources[i];
+    if (!isEmpty(source.title)) {
+      if (!isEmpty(source.url)) {
+        md.push(`**${i + 1}). [${source.title.trim()}](${source.url})**`);
+      } else {
+        md.push(`**${i + 1}). ${source.title.trim()}**`);
+      }
+    }
+    if (!isEmpty(source.snippet)) {
+      md.push(source.snippet.trim().replaceAll('\n\n', '\n'));
+    }
+  }
+  return md.join('\n\n---\n') || 'No Sources found';
+}
+
+async function getSourceAttributions(sources: SourceAttribution[]) {
+  const card = CardFactory.adaptiveCard({
+    type: 'AdaptiveCard',
+    version: '1.3',
+    body: [
+      {
+        type: 'TextBlock',
+        text: sourcesMarkdown(sources),
+        wrap: true
+      }
+    ]
+  });
+  logger.debug(`Sources Card: ${JSON.stringify(card)}`);
+  const taskModuleResponse: TaskModuleResponse = {
+    task: {
+      type: 'continue',
+      value: {
+        title: 'Sources',
+        height: 700,
+        width: 500,
+        card: card
+      }
+    }
+  };
+  return taskModuleResponse;
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
 export class QTeamsBot extends ActivityHandler {
   constructor() {
     super();
-    // See https://aka.ms/about-bot-activity-message to learn more about the message and other activity types.
+    // See https://aka.ms/about-bot-activity-message to learn more about activity types.
     this.onMessage(async (context) => {
       const tenantId = context.activity.conversation.tenantId;
       if (isEmpty(oathToken) && !isEmpty(tenantId)) {
         oathToken = await getOathToken(tenantId);
       }
       const env = getEnv(process.env);
-      logger.debug(`Context: ${JSON.stringify(context)}`);
+      logger.debug(`Message handler`);
       const activity = context.activity;
       const type = context.activity.conversation.conversationType;
 
@@ -228,14 +339,7 @@ export class QTeamsBot extends ActivityHandler {
       let qUserMessage = message;
       const qAttachments: QAttachment[] = [];
 
-      if (isEmpty(env.AMAZON_Q_USER_ID)) {
-        // Use Teams user email as Q UserId
-        const userEmail = await getEmailAddress(context);
-        env.AMAZON_Q_USER_ID = userEmail;
-        logger.debug(
-          `User's email (${userEmail}) used as Amazon Q userId, since AmazonQUserId is empty.`
-        );
-      }
+      env.AMAZON_Q_USER_ID = await setAmazonQUserId(context, env.AMAZON_Q_USER_ID);
 
       // We cache previous Amazon Q context metadata for personal DM channel
       let channelKey = '';
@@ -260,7 +364,9 @@ export class QTeamsBot extends ActivityHandler {
         // get any cached context metadata
         const channelMetadata = await getChannelMetadata(channelKey, env);
         logger.debug(
-          `Cached channel metadata: channelKey: ${channelKey}, metadata: ${JSON.stringify(channelMetadata)} `
+          `Cached channel metadata: channelKey: ${channelKey}, metadata: ${JSON.stringify(
+            channelMetadata
+          )} `
         );
         qContext = {
           conversationId: channelMetadata?.conversationId,
@@ -296,30 +402,87 @@ export class QTeamsBot extends ActivityHandler {
 
       // Send Processing indicator
       logger.debug('Sending Processing indicator');
-      const activityResponse = await context.sendActivity(MessageFactory.text(`*Processing...*`));
-      logger.debug(`Activity response: ${JSON.stringify(activityResponse)}`);
+      const messageResponse = await context.sendActivity(MessageFactory.text(PROCESSING_MSG));
 
       // call ChatSync API
-      const output = await qChatSync(env, qUserMessage, qAttachments, qContext);
-      if (output instanceof Error) {
-        const replyText = `${ERROR_MSG} : *${output.message}*`;
+      const qResponse = await qChatSync(env, qUserMessage, qAttachments, qContext);
+      if (qResponse instanceof Error) {
+        const replyText = `${ERROR_MSG} : *${qResponse.message}*`;
         await context.sendActivity(MessageFactory.text(replyText));
         return;
       }
 
-      // return response to user
-      const replyText = output.systemMessage;
-      await context.sendActivity(MessageFactory.text(replyText));
-      // delete previous progress message
-      if (!isEmpty(activityResponse)) {
-        await context.deleteActivity(activityResponse.id);
+      // return Amazon Q response to user by updating the first ('Processing...') message
+      const updatedMessage = MessageFactory.text(qResponse.systemMessage);
+      if (!isEmpty(messageResponse)) {
+        updatedMessage.id = messageResponse.id;
       }
+      logger.debug(
+        `Replace 'Processing...' message with Amazon Q Response: ${JSON.stringify(updatedMessage)}`
+      );
+      await context.updateActivity(updatedMessage); 
+
+      // NOTE: it is possible to include response and buttons in a single card message, but
+      // support for markdown in cards is limited.. headings / tables do not render correctly
+      // So we'll create buttons in a separate message
+      const cardActivity = await getButtonActivity(qResponse);
+      logger.debug(`CardActivity: ${JSON.stringify(cardActivity)}`);
+      logger.debug(`Sending Message with card / buttons`);
+      await delay(2000); // slight delay to avoid client refresh issue.
+      await context.sendActivity(cardActivity);
 
       // save metadata from sucessful response
       if (type === 'personal') {
-        await saveChannelMetadata(channelKey, output.conversationId, output.systemMessageId, env);
+        logger.debug(`Saving channel metadata for '${channelKey}'`);
+        await saveChannelMetadata(
+          channelKey,
+          qResponse.conversationId,
+          qResponse.systemMessageId,
+          env
+        );
       }
-      await saveMessageMetadata(output, env);
+      logger.debug(`Saving message metadata for '${qResponse.systemMessageId}'`);
+      await saveMessageMetadata(qResponse, env);
+      return;
     });
+  }
+  protected async onInvokeActivity(context: TurnContext): Promise<InvokeResponse> {
+    logger.debug(`InvokeActivity handler`);
+    const data = context.activity.value.data || context.activity.value;
+    const action = data.action;
+    const systemMessageId = data.systemMessageId;
+    logger.debug(`Action: ${action}, systemMessageId: ${systemMessageId}`);
+    const env = getEnv(process.env);
+    const qResponse = (await getMessageMetadata(systemMessageId, env)) as AmazonQResponse;
+    if (action === 'ViewSources') {
+      const sources = qResponse?.sourceAttributions || [];
+      const response = await getSourceAttributions(sources);
+      logger.debug(`Response: ${JSON.stringify(response)}`);
+      return { status: 200, body: response };
+    }
+    if (action === 'ThumbsUp' || action === 'ThumbsDown') {
+      env.AMAZON_Q_USER_ID = await setAmazonQUserId(context, env.AMAZON_Q_USER_ID);
+      await qPutFeedbackRequest(
+        env,
+        {
+          conversationId: qResponse.conversationId,
+          messageId: qResponse.systemMessageId
+        },
+        action === 'ThumbsUp' ? 'USEFUL' : 'NOT_USEFUL',
+        action === 'ThumbsUp' ? 'HELPFUL' : 'NOT_HELPFUL'
+      );
+      // Diabled message, since Teams already displays "Your response was sent to the app"
+      //await context.sendActivity(MessageFactory.text(FEEDBACK_ACK_MSG));
+      return {
+        status: 200,
+        body: {
+          task: {
+            type: 'continue'
+          }
+        }
+      };
+    }
+    logger.error(`Action '${action}' not implemented`);
+    return { status: 200, body: `Error - Action '${action}' not implemented` };
   }
 }
