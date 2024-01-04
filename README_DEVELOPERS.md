@@ -40,8 +40,6 @@ Navigate into the project root directory and, in a bash shell, run:
 Refer to [README](./README.md#2-configure-your-teams-bot-application)
 
 
-***NOT YET COMPLETE BELOW**
-
 ## Publish the solution
 
 In our main README, you will see that we provided Easy Deploy Buttons to launch a stack using pre-built templates that we published already to an S3 bucket. 

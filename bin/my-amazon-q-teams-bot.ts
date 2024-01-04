@@ -38,7 +38,7 @@ if (environment.ContextDaysToLive === undefined) {
 
 new MyAmazonQTeamsBotStack(
   app,
-  'MyAmazonQTeamsBotStack',
+  'AmazonQTeamsGatewayStack',
   {
     stackName: environment.StackName
   },
