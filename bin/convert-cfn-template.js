@@ -59,10 +59,6 @@ async function main() {
     console.log('Adding parameters to CloudFormation template...');
     parameterizeTemplate(template, lambdas);
 
-    // Add slack app manifest to the Outputs
-    console.log('Adding slack manifest to CloudFormation template...');
-    addSlackAppManifestOutputToTemplate(template);
-
     // Modify template description to differentiate from cdk deployments
     template.Description += ' (from S3 template)';
 
@@ -192,7 +188,7 @@ function parameterizeTemplate(template, lambdas) {
       Default: '',
       AllowedPattern: '(|^[\\w.+-]+@([\\w-]+\\.)+[\\w-]{2,6}$)',
       Description:
-        '(Optional) Amazon Q User ID email address (leave empty to use Slack users email as user Id)'
+        '(Optional) Amazon Q User ID email address (leave empty to use Teams users email as user Id)'
     },
     AmazonQAppId: {
       Type: 'String',
@@ -224,75 +220,5 @@ function parameterizeTemplate(template, lambdas) {
   }
 }
 
-function replaceSubstringInObject(obj, searchValue, replaceValue) {
-  for (let key in obj) {
-    if (typeof obj[key] === 'string') {
-      obj[key] = obj[key].replace(searchValue, replaceValue);
-    } else if (typeof obj[key] === 'object') {
-      replaceSubstringInObject(obj[key], searchValue, replaceValue);
-    }
-  }
-}
-
-function findOutputKey(obj, substring) {
-  let keys = Object.keys(obj).filter((key) => key.includes(substring));
-  return keys[0] || null; // Return the first key or null if no match is found
-}
-
-function addSlackAppManifestOutputToTemplate(template) {
-  // Read the manifest template
-  const manifestFile = 'slack-manifest-template.json';
-  console.log(`Reading slack app manifest template from ${manifestFile}...`);
-  const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
-  // replace token string with variable
-  replaceSubstringInObject(manifest, '!!! [SlackBotName] !!!', '${SlackBotName}');
-  replaceSubstringInObject(
-    manifest,
-    '!!! [SlackEventHandlerApiOutput] !!!',
-    '${SlackEventHandlerApiOutput}'
-  );
-  replaceSubstringInObject(
-    manifest,
-    '!!! [SlackInteractionHandlerApiOutput] !!!',
-    '${SlackInteractionHandlerApiOutput}'
-  );
-  replaceSubstringInObject(manifest, '!!! [SlackCommandApiOutput] !!!', '${SlackCommandApiOutput}');
-  const manifestString = JSON.stringify(manifest);
-  // get values for the token variables
-  const SlackBotNameValue = { Ref: 'AWS::StackName' };
-  const SlackEventHandlerApiOutputKey = findOutputKey(
-    template.Outputs,
-    'SlackEventHandlerApiEndpoint'
-  );
-  const SlackEventHandlerApiOutputValue = template.Outputs[SlackEventHandlerApiOutputKey].Value;
-  const SlackInteractionHandlerApiOutputKey = findOutputKey(
-    template.Outputs,
-    'SlackInteractionHandlerApiEndpoint'
-  );
-  const SlackInteractionHandlerApiOutputValue =
-    template.Outputs[SlackInteractionHandlerApiOutputKey].Value;
-  const SlackCommandApiOutputKey = findOutputKey(
-    template.Outputs,
-    'SlackCommandHandlerApiEndpoint'
-  );
-  const SlackCommandApiOutputOutputValue = template.Outputs[SlackCommandApiOutputKey].Value;
-  // create manifest expression using Fn::Sub
-  const manifestExpression = {
-    'Fn::Sub': [
-      manifestString,
-      {
-        SlackBotName: SlackBotNameValue,
-        SlackEventHandlerApiOutput: SlackEventHandlerApiOutputValue,
-        SlackInteractionHandlerApiOutput: SlackInteractionHandlerApiOutputValue,
-        SlackCommandApiOutput: SlackCommandApiOutputOutputValue
-      }
-    ]
-  };
-  // add manifest output to template
-  template.Outputs.SlackAppManifest = {
-    Value: manifestExpression,
-    Description: 'Slack app manifest JSON (copy/paste to create/update slack app)'
-  };
-}
 
 main();
