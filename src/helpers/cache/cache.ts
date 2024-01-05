@@ -64,6 +64,7 @@ export const saveMessageMetadata = async (amazonQResponse: AmazonQResponse, env:
     Item: {
       messageId: amazonQResponse.systemMessageId,
       conversationId: amazonQResponse.conversationId,
+      systemMessage: amazonQResponse.systemMessage,
       sourceAttributions: amazonQResponse.sourceAttributions,
       systemMessageId: amazonQResponse.systemMessageId,
       userMessageId: amazonQResponse.userMessageId,
