@@ -35,7 +35,7 @@ import {
 } from '@src/helpers/cache/cache';
 export const ERROR_MSG = '***Processing error***';
 const PROCESSING_MSG = '*Processing...*';
-const FEEDBACK_ACK_MSG = '*Thank you for your feedback!*';
+const FEEDBACK_ACK_MSG = '*Thanks for your feedback!*';
 let oathToken = '';
 
 const SUPPORTED_FILE_TYPES = [
@@ -259,7 +259,7 @@ async function getAPIResponse(url: string, oathToken: string) {
   }
 }
 
-async function getButtonActivity(qResponse: AmazonQResponse) {
+async function getButtonActivity(qResponse: AmazonQResponse, enableFeedback: Boolean) {
   const cardButtons: CardAction[] = [];
   // view sources
   if (!isEmpty(qResponse.sourceAttributions)) {
@@ -274,20 +274,22 @@ async function getButtonActivity(qResponse: AmazonQResponse) {
     });
   }
   // feedback buttons
-  [
-    { action: 'ThumbsUp', label: '👍' },
-    { action: 'ThumbsDown', label: '👎' }
-  ].map((feedback) => {
-    cardButtons.push({
-      type: 'invoke',
-      title: feedback.label,
-      value: {
-        type: ActionTypes.ImBack,
-        action: feedback.action,
-        systemMessageId: qResponse.systemMessageId
-      }
+  if (enableFeedback) {
+    [
+      { action: 'ThumbsUp', label: '👍' },
+      { action: 'ThumbsDown', label: '👎' }
+    ].map((feedback) => {
+      cardButtons.push({
+        type: 'invoke',
+        title: feedback.label,
+        value: {
+          type: ActionTypes.ImBack,
+          action: feedback.action,
+          systemMessageId: qResponse.systemMessageId
+        }
+      });
     });
-  });
+  }
   const html = await marked.parse(qResponse.systemMessage);
   const card = CardFactory.heroCard('', html, undefined, cardButtons);
   return MessageFactory.attachment(card);
@@ -336,6 +338,10 @@ async function getSourceAttributions(sources: SourceAttribution[]) {
     }
   };
   return taskModuleResponse;
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
 export class QTeamsBot extends ActivityHandler {
@@ -431,7 +437,7 @@ export class QTeamsBot extends ActivityHandler {
       }
 
       // return Amazon Q response to user by updating the first ('Processing...') message
-      const updatedMessage = await getButtonActivity(qResponse);
+      const updatedMessage = await getButtonActivity(qResponse, true);
       if (!isEmpty(messageResponse)) {
         updatedMessage.id = messageResponse.id;
       }
@@ -463,6 +469,7 @@ export class QTeamsBot extends ActivityHandler {
     logger.debug(`Action: ${action}, systemMessageId: ${systemMessageId}`);
     const env = getEnv(process.env);
     const qResponse = (await getMessageMetadata(systemMessageId, env)) as AmazonQResponse;
+    logger.debug(`Cached QResponse: ${JSON.stringify(qResponse)}`);
     if (action === 'ViewSources') {
       const sources = qResponse?.sourceAttributions || [];
       const response = await getSourceAttributions(sources);
@@ -480,8 +487,14 @@ export class QTeamsBot extends ActivityHandler {
         action === 'ThumbsUp' ? 'USEFUL' : 'NOT_USEFUL',
         action === 'ThumbsUp' ? 'HELPFUL' : 'NOT_HELPFUL'
       );
-      // Diabled message, since Teams already displays "Your response was sent to the app"
-      //await context.sendActivity(MessageFactory.text(FEEDBACK_ACK_MSG));
+      const updatedMessage = await getButtonActivity(qResponse, false);
+      updatedMessage.id = context.activity.replyToId;
+      logger.debug(
+        `Update message to remove feedback buttons: ${JSON.stringify(updatedMessage)}`
+      );
+      await context.updateActivity(updatedMessage);
+      await delay(1000); // Teams client needs a small delay to reliably display message
+      await context.sendActivity(MessageFactory.text(FEEDBACK_ACK_MSG));
       return {
         status: 200,
         body: {
