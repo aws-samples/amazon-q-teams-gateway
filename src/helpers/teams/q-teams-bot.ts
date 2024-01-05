@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { htmlToText } from 'html-to-text';
+import * as marked from 'marked';
 import { ConfidentialClientApplication, Configuration } from '@azure/msal-node';
 import {
   ActivityHandler,
@@ -201,7 +202,28 @@ async function retrieveThreadHistory(
   // build conversation history JSON
   const threadMessages = [];
   for (const m of fullThread) {
-    const message = htmlToText(m.body.content);
+    logger.debug(`Message: ${JSON.stringify(m)}`);
+    let message = htmlToText(m.body.content);
+    // Check if message is empty and attachments exist
+    if (isEmpty(message) && m.attachments.length > 0) {
+      const attachment0 = m.attachments[0];
+      logger.debug(`Attachment0: ${JSON.stringify(m.attachments[0])}`);
+      // Process content in card text if available
+      if (!isEmpty(attachment0.content)) {
+        try {
+          const content = JSON.parse(attachment0.content);
+          logger.debug(`Content: ${JSON.stringify(content)}`);
+          if (content.text) {
+            logger.debug(`Content.text: ${content.text}`);
+            message = htmlToText(content.text);
+          }
+        } catch (error) {
+          logger.error(
+            `Error parsing JSON in attachment content: ${attachment0.content}: ${error}`
+          );
+        }
+      }
+    }
     if (!isEmpty(message) && message !== FEEDBACK_ACK_MSG) {
       threadMessages.push({
         name: m.from?.user?.displayName || m.from?.application?.displayName || '',
@@ -238,7 +260,6 @@ async function getAPIResponse(url: string, oathToken: string) {
 }
 
 async function getButtonActivity(qResponse: AmazonQResponse) {
-  // add buttons
   const cardButtons: CardAction[] = [];
   // view sources
   if (!isEmpty(qResponse.sourceAttributions)) {
@@ -267,7 +288,8 @@ async function getButtonActivity(qResponse: AmazonQResponse) {
       }
     });
   });
-  const card = CardFactory.heroCard('', '', undefined, cardButtons);
+  const html = await marked.parse(qResponse.systemMessage);
+  const card = CardFactory.heroCard('', html, undefined, cardButtons);
   return MessageFactory.attachment(card);
 }
 
@@ -314,10 +336,6 @@ async function getSourceAttributions(sources: SourceAttribution[]) {
     }
   };
   return taskModuleResponse;
-}
-
-function delay(milliseconds: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
 export class QTeamsBot extends ActivityHandler {
@@ -413,23 +431,14 @@ export class QTeamsBot extends ActivityHandler {
       }
 
       // return Amazon Q response to user by updating the first ('Processing...') message
-      const updatedMessage = MessageFactory.text(qResponse.systemMessage);
+      const updatedMessage = await getButtonActivity(qResponse);
       if (!isEmpty(messageResponse)) {
         updatedMessage.id = messageResponse.id;
       }
       logger.debug(
         `Replace 'Processing...' message with Amazon Q Response: ${JSON.stringify(updatedMessage)}`
       );
-      await context.updateActivity(updatedMessage); 
-
-      // NOTE: it is possible to include response and buttons in a single card message, but
-      // support for markdown in cards is limited.. headings / tables do not render correctly
-      // So we'll create buttons in a separate message
-      const cardActivity = await getButtonActivity(qResponse);
-      logger.debug(`CardActivity: ${JSON.stringify(cardActivity)}`);
-      logger.debug(`Sending Message with card / buttons`);
-      await delay(2000); // slight delay to avoid client refresh issue.
-      await context.sendActivity(cardActivity);
+      await context.updateActivity(updatedMessage);
 
       // save metadata from sucessful response
       if (type === 'personal') {

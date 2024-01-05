@@ -220,5 +220,4 @@ function parameterizeTemplate(template, lambdas) {
   }
 }
 
-
 main();
