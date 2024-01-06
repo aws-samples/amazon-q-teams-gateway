@@ -8,9 +8,9 @@ In this repo we share a project which lets you use Amazon Q's generative AI to e
   - In a channel users can ask it questions in a new message, or tag it in a thread at any point. Get it to provide additional data points, resolve a debate, or summarize the conversation and capture next steps. 
 
 It's amazingly powerful. Here's a demo - seeing is believing!
- 
 
-TODO - Make video
+
+https://github.com/aws-samples/amazon-q-teams-gateway/assets/10953374/b43022ab-4df2-45e5-aee3-448085d83d60
 
 
 It's easy to deploy in your own AWS Account, and add to your own teams. We show you how below.
