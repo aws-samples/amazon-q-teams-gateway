@@ -99,13 +99,13 @@ When your CloudFormation stack status is CREATE_COMPLETE, choose the **Outputs**
 
 1. Go to the Microsoft Bot Framework: https://dev.botframework.com/bots/new
 1. (Optional) Create and upload a cool custom icon for your new Amazon Q Bot. Or, use this one that I created using [Amazon Bedrock image playgound](https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/image-playground?modelId=stability.stable-diffusion-xl-v1)!  
-<img src=./images/QBotIcon.png height=70 />
-1. Enter your prefered **Display name**, **Bot handle**, and **Long description**.  
-1. For **Messaging endpoint** copy and paste the value of the `TeamsEventHandlerApiEndpoint` from your Stack outputs tab (from Step 1).  *Do not check Enable Streaming Endpoint*.  
+<img src=./images/QBotIcon.png height=70 />  
+1. Enter your prefered **Display name**, **Bot handle**, and **Long description**.    
+1. For **Messaging endpoint** copy and paste the value of the `TeamsEventHandlerApiEndpoint` from your Stack outputs tab (from Step 1).  *Do not check Enable Streaming Endpoint*.   
 1. For **App type**, choose `Single Tenant`.  
-1. For **Paste your app ID below to continue**, enter the *MicrosoftAppId* value you noted above. 
-1. For **App Tenant ID**, enter the *MicrosoftAppTenantId* value you noted above.
-1. Leave the other values as they are, agree to the terms, and choose **Register**.  
+1. For **Paste your app ID below to continue**, enter the *MicrosoftAppId* value you noted above.   
+1. For **App Tenant ID**, enter the *MicrosoftAppTenantId* value you noted above.  
+1. Leave the other values as they are, agree to the terms, and choose **Register**.   
 1. On the **Channels** page, under **Add a featured channel** choose **Microsoft Teams**  
 1. Choose **Microsoft Teams Commercial (most common)**, and then **Save**.  
 1. Agree to the Terms of Service and choose **Agree**  
