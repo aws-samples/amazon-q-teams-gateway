@@ -259,7 +259,7 @@ async function getAPIResponse(url: string, oathToken: string) {
   }
 }
 
-async function getButtonActivity(qResponse: AmazonQResponse, enableFeedback: Boolean) {
+async function getButtonActivity(qResponse: AmazonQResponse, enableFeedback: boolean) {
   const cardButtons: CardAction[] = [];
   // view sources
   if (!isEmpty(qResponse.sourceAttributions)) {
@@ -307,7 +307,11 @@ function sourcesMarkdown(sources: SourceAttribution[]) {
       }
     }
     if (!isEmpty(source.snippet)) {
-      md.push(source.snippet.trim().replaceAll('\n\n', '\n'));
+      const snippet =
+        source.snippet.length > 3000
+          ? source.snippet.slice(0, 3000 - (1 + 3)).trim() + '...'
+          : source.snippet.trim();
+      md.push(snippet.trim().replaceAll('\n\n', '\n'));
     }
   }
   return md.join('\n\n---\n') || 'No Sources found';
@@ -341,7 +345,7 @@ async function getSourceAttributions(sources: SourceAttribution[]) {
 }
 
 function delay(milliseconds: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, milliseconds));
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 export class QTeamsBot extends ActivityHandler {
@@ -489,9 +493,7 @@ export class QTeamsBot extends ActivityHandler {
       );
       const updatedMessage = await getButtonActivity(qResponse, false);
       updatedMessage.id = context.activity.replyToId;
-      logger.debug(
-        `Update message to remove feedback buttons: ${JSON.stringify(updatedMessage)}`
-      );
+      logger.debug(`Update message to remove feedback buttons: ${JSON.stringify(updatedMessage)}`);
       await context.updateActivity(updatedMessage);
       await delay(1000); // Teams client needs a small delay to reliably display message
       await context.sendActivity(MessageFactory.text(FEEDBACK_ACK_MSG));
