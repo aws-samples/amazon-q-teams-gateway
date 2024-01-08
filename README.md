@@ -99,7 +99,7 @@ When your CloudFormation stack status is CREATE_COMPLETE, choose the **Outputs**
 
 1. Go to the Microsoft Bot Framework: https://dev.botframework.com/bots/new
 1. (Optional) Create and upload a cool custom icon for your new Amazon Q Bot. Or, use this one that I created using [Amazon Bedrock image playgound](https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/image-playground?modelId=stability.stable-diffusion-xl-v1)!  
-<img src=./images/QBotIcon.png height=70 />  
+      <img src=./images/QBotIcon.png height=70 />  
 1. Enter your prefered **Display name**, **Bot handle**, and **Long description**.    
 1. For **Messaging endpoint** copy and paste the value of the `TeamsEventHandlerApiEndpoint` from your Stack outputs tab (from Step 1).  *Do not check Enable Streaming Endpoint*.   
 1. For **App type**, choose `Single Tenant`.  
