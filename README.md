@@ -53,7 +53,7 @@ If you are a developer, and you want to build, deploy and/or publish the solutio
     1. `Stack Name`: Name your App, e.g. AMAZON-Q-TEAMS-GATEWAY.
     2. `AmazonQAppId`: Your existing Amazon Q Application ID (copy from Amazon Q console). 
     3. `AmazonQRegion`: Choose the region where you created your Amazon Q Application.
-    4. `AmazonQUserId`: (Optional) Amazon Q User ID email address (leave empty to use Slack users email as user Id) **REQUIRED CURRENTLY**
+    4. `AmazonQUserId`: (Optional) Amazon Q User ID email address (leave empty to use Teams users email as user Id)
     5. `ContextDaysToLive`: Just leave this as the default (90 days)
 
 Region | Easy Deploy Button | Template URL - use to upgrade existing stack to a new release
