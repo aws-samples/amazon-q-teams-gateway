@@ -151,7 +151,7 @@ Let's configure your App secrets in order to (1) verify the signature of each re
     1. Choose **Upload an app to your orgs app catalog**, and select the zip file downloaded in the previous step. This adds the app to Teams.
     1. Select the card for your new app and choose **Add**.
 
-And, now, at least, you can test your bot in Microsoft Teams!
+And, now, at last, you can test your bot in Microsoft Teams!
 
 ### Say hello
 > Time to say Hi!
