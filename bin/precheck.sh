@@ -24,7 +24,7 @@ tsc_version="3.8.0"
 esbuild_version="0.19.0"
 jq_version="1.5"
 aws_version="2.10.2"
-cdk_version="2.94.0"
+cdk_version="2.119.0"
 
 status=0
 
