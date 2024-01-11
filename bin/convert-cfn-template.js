@@ -183,7 +183,7 @@ function updateTemplateLambdaRolePermissions(template, lambdas) {
 
 function parameterizeTemplate(template, lambdas) {
   const allowedQRegions = ['us-east-1', 'us-west-2'];
-  const defaultQRegion = (allowedQRegions.includes(awsRegion)) ? awsRegion : allowedQRegions[0];
+  const defaultQRegion = allowedQRegions.includes(awsRegion) ? awsRegion : allowedQRegions[0];
   template.Parameters = {
     AmazonQUserId: {
       Type: 'String',
