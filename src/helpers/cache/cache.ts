@@ -1,6 +1,6 @@
 import * as AWS from 'aws-sdk';
 import { Env } from '@src/utils';
-import { AmazonQResponse } from '@src/helpers/amazon-q/amazon-q-client';
+import { ChatSyncCommandOutput } from '@aws-sdk/client-qbusiness';
 
 export const client = new AWS.DynamoDB.DocumentClient({
   region: process.env.AWS_REGION,
@@ -58,7 +58,7 @@ export const deleteChannelMetadata = async (channel: string, env: Env) =>
     }
   });
 
-export const saveMessageMetadata = async (amazonQResponse: AmazonQResponse, env: Env) => {
+export const saveMessageMetadata = async (amazonQResponse: ChatSyncCommandOutput, env: Env) => {
   await putItem({
     TableName: env.MESSAGE_METADATA_TABLE_NAME,
     Item: {

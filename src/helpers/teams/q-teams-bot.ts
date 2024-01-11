@@ -20,12 +20,11 @@ import { makeLogger } from '@src/logging';
 import { isEmpty, getTeamsSecret } from '@src/utils';
 const logger = makeLogger('q-teams-bot');
 import {
-  qChatSync,
-  qPutFeedbackRequest,
-  QAttachment,
-  AmazonQResponse,
+  ChatSyncCommandOutput,
+  AttachmentInput,
   SourceAttribution
-} from '@src/helpers/amazon-q/amazon-q-client';
+} from '@aws-sdk/client-qbusiness';
+import { qChatSync, qPutFeedbackRequest } from '@src/helpers/amazon-q/amazon-q-client';
 import {
   getChannelMetadata,
   saveChannelMetadata,
@@ -83,8 +82,8 @@ const attachFiles = async (
   attachments: Attachment[],
   oathToken: string,
   teamId?: string
-): Promise<QAttachment[]> => {
-  const qAttachments: QAttachment[] = [];
+): Promise<AttachmentInput[]> => {
+  const qAttachments: AttachmentInput[] = [];
   for (const a of attachments) {
     // Process downloadable attachments
     // DM messages have a signed downloadUrl, but retrieved channel messages have only unsigned contentUrl
@@ -177,7 +176,7 @@ interface ThreadMessages {
 async function retrieveThreadHistory(
   context: TurnContext,
   oathToken: string
-): Promise<[ThreadMessages[], QAttachment[]]> {
+): Promise<[ThreadMessages[], AttachmentInput[]]> {
   const teamDetails: TeamDetails = await TeamsInfo.getTeamDetails(context);
   logger.debug(`Team Details: ${JSON.stringify(teamDetails)}`);
   const teamGUID = teamDetails.aadGroupId;
@@ -234,7 +233,7 @@ async function retrieveThreadHistory(
     }
   }
   // get attachments from thread history
-  const threadAttachments: QAttachment[] = [];
+  const threadAttachments: AttachmentInput[] = [];
   for (const m of fullThread) {
     const teamId = m.channelIdentity.teamId;
     if (!isEmpty(m?.attachments)) {
@@ -260,7 +259,7 @@ async function getAPIResponse(url: string, oathToken: string) {
   }
 }
 
-async function getButtonActivity(qResponse: AmazonQResponse, enableFeedback: boolean) {
+async function getButtonActivity(qResponse: ChatSyncCommandOutput, enableFeedback: boolean) {
   const cardButtons: CardAction[] = [];
   // view sources
   if (!isEmpty(qResponse.sourceAttributions)) {
@@ -291,7 +290,9 @@ async function getButtonActivity(qResponse: AmazonQResponse, enableFeedback: boo
       });
     });
   }
-  const html = await marked.parse(qResponse.systemMessage);
+  const html = await marked.parse(
+    qResponse.systemMessage || 'No systemMessage in Amazon Q response'
+  );
   const card = CardFactory.heroCard('', html, undefined, cardButtons);
   return MessageFactory.attachment(card);
 }
@@ -371,7 +372,7 @@ export class QTeamsBot extends ActivityHandler {
       }
 
       let qUserMessage = message;
-      const qAttachments: QAttachment[] = [];
+      const qAttachments: AttachmentInput[] = [];
 
       env.AMAZON_Q_USER_ID = await setAmazonQUserId(context, env.AMAZON_Q_USER_ID);
 
@@ -457,7 +458,11 @@ export class QTeamsBot extends ActivityHandler {
       await context.updateActivity(updatedMessage);
 
       // save metadata from sucessful response
-      if (type === 'personal') {
+      if (
+        type === 'personal' &&
+        !isEmpty(qResponse.conversationId) &&
+        !isEmpty(qResponse.systemMessageId)
+      ) {
         logger.debug(`Saving channel metadata for '${channelKey}'`);
         await saveChannelMetadata(
           channelKey,
@@ -478,7 +483,7 @@ export class QTeamsBot extends ActivityHandler {
     const systemMessageId = data.systemMessageId;
     logger.debug(`Action: ${action}, systemMessageId: ${systemMessageId}`);
     const env = getEnv(process.env);
-    const qResponse = (await getMessageMetadata(systemMessageId, env)) as AmazonQResponse;
+    const qResponse = (await getMessageMetadata(systemMessageId, env)) as ChatSyncCommandOutput;
     logger.debug(`Cached QResponse: ${JSON.stringify(qResponse)}`);
     if (action === 'ViewSources') {
       const sources = qResponse?.sourceAttributions || [];
@@ -488,15 +493,17 @@ export class QTeamsBot extends ActivityHandler {
     }
     if (action === 'ThumbsUp' || action === 'ThumbsDown') {
       env.AMAZON_Q_USER_ID = await setAmazonQUserId(context, env.AMAZON_Q_USER_ID);
-      await qPutFeedbackRequest(
-        env,
-        {
-          conversationId: qResponse.conversationId,
-          messageId: qResponse.systemMessageId
-        },
-        action === 'ThumbsUp' ? 'USEFUL' : 'NOT_USEFUL',
-        action === 'ThumbsUp' ? 'HELPFUL' : 'NOT_HELPFUL'
-      );
+      if (!isEmpty(qResponse.conversationId) && !isEmpty(qResponse.systemMessageId)) {
+        await qPutFeedbackRequest(
+          env,
+          {
+            conversationId: qResponse.conversationId,
+            messageId: qResponse.systemMessageId
+          },
+          action === 'ThumbsUp' ? 'USEFUL' : 'NOT_USEFUL',
+          action === 'ThumbsUp' ? 'HELPFUL' : 'NOT_HELPFUL'
+        );
+      }
       const updatedMessage = await getButtonActivity(qResponse, false);
       updatedMessage.id = context.activity.replyToId;
       logger.debug(`Update message to remove feedback buttons: ${JSON.stringify(updatedMessage)}`);

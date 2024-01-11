@@ -90,7 +90,6 @@ export class MyAmazonQTeamsBotStack extends cdk.Stack {
           timeout: Duration.seconds(30),
           environment: {
             TEAMS_SECRET_NAME: teamsSecret.secretName,
-            AMAZON_Q_ENDPOINT: env.AmazonQEndpoint ?? '',
             AMAZON_Q_REGION: env.AmazonQRegion,
             AMAZON_Q_APP_ID: env.AmazonQAppId,
             AMAZON_Q_USER_ID: env.AmazonQUserId ?? '',

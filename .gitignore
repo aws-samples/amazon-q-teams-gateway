@@ -10,3 +10,4 @@ dist
 cdk-outputs.json
 environment.json*
 build
+awsrelease.sh
