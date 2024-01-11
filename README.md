@@ -71,7 +71,7 @@ When your CloudFormation stack status is CREATE_COMPLETE, choose the **Outputs**
 
 #### 2.1 Register a new app in the Microsoft Azure portal
 
-1. Go to the Azure Portal: https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade
+1. Go to the Azure Portal: https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade and login with your Microsoft account.
 1. Choose **+ New registration**
     1. For **Name**, provide the name for your app. *Tip: Keep things simple by using the `Stack Name` you entered above.*
     1. For **Who can use this application or access this API?**, choose **Accounts in this organizational directory only (AWS only - Single tenant)**
@@ -99,7 +99,7 @@ When your CloudFormation stack status is CREATE_COMPLETE, choose the **Outputs**
 
 #### 2.2 Register your new app in the Microsoft Bot Framework
 
-1. Go to the Microsoft Bot Framework: https://dev.botframework.com/bots/new
+1. Go to the Microsoft Bot Framework: https://dev.botframework.com/bots/new - login with your Microsoft account.
 1. (Optional) Create and upload a cool custom icon for your new Amazon Q Bot. Or, use this one that I created using [Amazon Bedrock image playgound](https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/image-playground?modelId=stability.stable-diffusion-xl-v1)!  
       <img src=./images/QBotIcon.png height=70 />  
 1. Enter your prefered **Display name**, **Bot handle**, and **Long description**.    
@@ -130,7 +130,7 @@ Let's configure your App secrets in order to (1) verify the signature of each re
 
 ### 4. Finally, deploy into Microsoft Teams
 
-1. Go to Developer Portal for Teams: https://dev.teams.microsoft.com/home
+1. Go to Developer Portal for Teams: https://dev.teams.microsoft.com/home - login with your Microsoft Teams user account.
 1. Choose **+ New app**
     1. For **Name**, enter your bot name.
     1. Enter **Full name** and both short and full **Descriptions** *(you can just use the bot name for them all if you want - just don't leave them empty)*
