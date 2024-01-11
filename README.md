@@ -41,6 +41,8 @@ You need to have an AWS account and an IAM Role/User with permissions to create 
 
 You also need to have an existing, working Amazon Q application. If you haven't set one up yet, see [Creating an Amazon Q application](https://docs.aws.amazon.com/amazonq/latest/business-use-dg/create-app.html)
 
+Lastly, you need a [Microsoft account](https://account.microsoft.com/) and a [Microsoft Teams subscription](https://www.microsoft.com/en-us/microsoft-teams/compare-microsoft-teams-business-options-b) to create and publish the app using the steps below. If you don’t have these, see if your company can create sandboxes for you to experiment, or create a new account and trial subscription as needed to complete the directions below.
+
 ### 1. Deploy the stack
 
 We've made this easy by providing pre-built AWS CloudFormation templates that deploy everything you need in your AWS account.
