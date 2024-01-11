@@ -36,6 +36,7 @@ import {
 export const ERROR_MSG = '***Processing error***';
 const PROCESSING_MSG = '*Processing...*';
 const FEEDBACK_ACK_MSG = '*Thanks for your feedback!*';
+const EMPTY_MESSAGE = 'No user message in input.'
 let oathToken = '';
 
 const SUPPORTED_FILE_TYPES = [
@@ -364,6 +365,11 @@ export class QTeamsBot extends ActivityHandler {
 
       const message = context.activity.text;
       logger.info(`Message received: ${message}`);
+      if (isEmpty(message)) {
+        logger.error(EMPTY_MESSAGE);
+        throw(EMPTY_MESSAGE)
+      }
+
       let qUserMessage = message;
       const qAttachments: QAttachment[] = [];
 
