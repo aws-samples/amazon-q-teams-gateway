@@ -155,6 +155,13 @@ Let's configure your App secrets in order to (1) verify the signature of each re
 
 And, now, at last, you can test your bot in Microsoft Teams!
 
+### Add your bot to one or more Teams
+To use your Amazon Q app in your team channels, first add it to each team:
+1. In the Teams app, select your Team and choose 'Manage team'
+2. In the Apps tab, choose the new Amazon Q app, and Add.
+
+![Teams Demo](./images/AddToTeam.png)
+
 ### Say hello
 > Time to say Hi!
 
