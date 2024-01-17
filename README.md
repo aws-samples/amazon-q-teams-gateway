@@ -10,7 +10,7 @@ In this repo we share a project which lets you use Amazon Q's generative AI to e
 It's amazingly powerful. Here's a demo - seeing is believing!
 
 
-https://github.com/aws-samples/amazon-q-teams-gateway/assets/10953374/b43022ab-4df2-45e5-aee3-448085d83d60
+https://github.com/aws-samples/amazon-q-teams-gateway/assets/10953374/9dbe884c-95ea-49e1-b1fa-ba588d77e4f1
 
 
 It's easy to deploy in your own AWS Account, and add to your own teams. We show you how below.
