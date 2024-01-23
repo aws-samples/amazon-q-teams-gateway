@@ -1,17 +1,19 @@
 # Microsoft Teams gateway for Amazon Q, your business expert (preview)
 
+*See AWS Blog post: [Deploy a Microsoft Teams gateway for Amazon Q, your business expert](https://aws.amazon.com/blogs/machine-learning/deploy-a-microsoft-teams-gateway-for-amazon-q-your-business-expert/)*
+
 Amazon Q is a new generative AI-powered application that helps users get work done. Amazon Q can become your tailored business expert and let you discover content, brainstorm ideas, or create summaries using your company’s data safely and securely. For more information see: [Introducing Amazon Q, a new generative AI-powered assistant (preview)](https://aws.amazon.com/blogs/aws/introducing-amazon-q-a-new-generative-ai-powered-assistant-preview)
 
-In this repo we share a project which lets you use Amazon Q's generative AI to enable Microsoft Teams members  to access your organizations data and knowledge sources via conversational question-answering. You can connect to your organization data via data source connectors and integrate it with Teams Gateway for Amazon Q to enable access to your Teams channel members. It allows your users to:
-- Converse with Amazon Q using Teams Direct Message (DM) to ask questions and get answers based on company data, get help creating new content such as emails, and performing tasks. 
+In this repo we share a project which lets you use Amazon Q business expert's generative AI to enable Microsoft Teams members  to access your organizations data and knowledge sources via conversational question-answering. If you use Slack, refer to [Deploy a Slack gateway for Amazon Q, your business expert](https://aws.amazon.com/blogs/machine-learning/deploy-a-slack-gateway-for-amazon-q-your-business-expert/).  
+ 
+You can connect to your organization data via data source connectors and integrate it with Teams Gateway for Amazon Q business expert to enable access to your Teams channel members. It allows your users to:
+- Converse with Amazon Q business expert using Teams Direct Message (DM) to ask questions and get answers based on company data, get help creating new content such as emails, and performing tasks. 
 - You can also invite it to participate in your team channels. 
   - In a channel users can ask it questions in a new message, or tag it in a thread at any point. Get it to provide additional data points, resolve a debate, or summarize the conversation and capture next steps. 
 
 It's amazingly powerful. Here's a demo - seeing is believing!
 
-
-https://github.com/aws-samples/amazon-q-teams-gateway/assets/10953374/9dbe884c-95ea-49e1-b1fa-ba588d77e4f1
-
+https://github.com/aws-samples/amazon-q-teams-gateway/assets/10953374/a9bc5f5c-c317-4d93-870e-a9a49b2518e4
 
 It's easy to deploy in your own AWS Account, and add to your own teams. We show you how below.
 
@@ -27,7 +29,7 @@ It's easy to deploy in your own AWS Account, and add to your own teams. We show 
 - Process up to 5 attached files for document question answering, summaries, etc.
 - Reset and start new conversation in DM channel by using `/new_conversation`.
 
-This sample Amazon Q Teams application is provided as open source — use it as a starting point for your own solution, and help us make it better by contributing back fixes and features via GitHub pull requests. Explore the code, choose Watch to be notified of new releases, and check back for the latest  updates.
+This sample Amazon Q business expert Teams application is provided as open source — use it as a starting point for your own solution, and help us make it better by contributing back fixes and features via GitHub pull requests. Explore the code, choose Watch to be notified of new releases, and check back for the latest  updates.
 
 ![Teams Demo](./images/thread-demo.png)
 
@@ -39,7 +41,7 @@ Follow the instructions below to deploy the project to your own AWS account and 
 
 You need to have an AWS account and an IAM Role/User with permissions to create and manage the necessary resources and components for this application. *(If you do not have an AWS account, please see [How do I create and activate a new Amazon Web Services account?](https://aws.amazon.com/premiumsupport/knowledge-center/create-and-activate-aws-account/))*
 
-You also need to have an existing, working Amazon Q application. If you haven't set one up yet, see [Creating an Amazon Q application](https://docs.aws.amazon.com/amazonq/latest/business-use-dg/create-app.html)
+You also need to have an existing, working Amazon Q business expert application. If you haven't set one up yet, see [Creating an Amazon Q application](https://docs.aws.amazon.com/amazonq/latest/business-use-dg/create-app.html)
 
 Lastly, you need a [Microsoft account](https://account.microsoft.com/) and a [Microsoft Teams subscription](https://www.microsoft.com/en-us/microsoft-teams/compare-microsoft-teams-business-options-b) to create and publish the app using the steps below. If you don’t have these, see if your company can create sandboxes for you to experiment, or create a new account and trial subscription as needed to complete the directions below.
 
@@ -53,8 +55,8 @@ If you are a developer, and you want to build, deploy and/or publish the solutio
 2. Choose one of the **Launch Stack** buttons below for your desired AWS region to open the AWS CloudFormation console and create a new stack.
 4. Enter the following parameters:
     1. `Stack Name`: Name your App, e.g. AMAZON-Q-TEAMS-GATEWAY.
-    2. `AmazonQAppId`: Your existing Amazon Q Application ID (copy from Amazon Q console). 
-    3. `AmazonQRegion`: Choose the region where you created your Amazon Q Application.
+    2. `AmazonQAppId`: Your existing Amazon Q business expert application ID (copy from Amazon Q console). 
+    3. `AmazonQRegion`: Choose the region where you created your Amazon Q business expert application.
     4. `AmazonQUserId`: (Optional) Amazon Q User ID email address (leave empty to use Teams users email as user Id)
     5. `ContextDaysToLive`: Just leave this as the default (90 days)
 
@@ -156,7 +158,7 @@ Let's configure your App secrets in order to (1) verify the signature of each re
 And, now, at last, you can test your bot in Microsoft Teams!
 
 ### Add your bot to one or more Teams
-To use your Amazon Q app in your team channels, first add it to each team:
+To use your Amazon Q business expert app in your team channels, first add it to each team:
 1. In the Teams app, select your Team and choose 'Manage team'
 2. In the Apps tab, choose the new Amazon Q app, and Add.
 
@@ -166,7 +168,7 @@ To use your Amazon Q app in your team channels, first add it to each team:
 > Time to say Hi!
 
 1. Go to Teams
-2. Under Apps add your new Amazon Q app to a Chat 
+2. Under Apps add your new Amazon Q business expert app to a Chat 
 3. Optionally add your app to one or more Team channels
 4. In the app DM chat, say *Hello*. In a team channel, ask it for help with an @mention.
 5. Enjoy.
