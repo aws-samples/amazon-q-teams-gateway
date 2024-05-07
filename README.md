@@ -1,6 +1,11 @@
-# Microsoft Teams gateway for Amazon Q, your business expert (preview)
+# Microsoft Teams gateway for Amazon Q Business
+
+| :zap:        If you have created a new Amazon Q Business application on or after April 30th, 2022, you will not be able to set up a Slack or Microsoft Teams gateway using the instructions provided. This is because new Amazon Q Business applications require integration with IAM Identity Center. We are currently working on updating the solution and the necessary steps for new applications created since April 30th, 2022.   |
+|-----------------------------------------|
 
 *See AWS Blog post: [Deploy a Microsoft Teams gateway for Amazon Q, your business expert](https://aws.amazon.com/blogs/machine-learning/deploy-a-microsoft-teams-gateway-for-amazon-q-your-business-expert/)*
+
+
 
 Amazon Q is a new generative AI-powered application that helps users get work done. Amazon Q can become your tailored business expert and let you discover content, brainstorm ideas, or create summaries using your company’s data safely and securely. For more information see: [Introducing Amazon Q, a new generative AI-powered assistant (preview)](https://aws.amazon.com/blogs/aws/introducing-amazon-q-a-new-generative-ai-powered-assistant-preview)
 
