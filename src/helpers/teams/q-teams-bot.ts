@@ -13,7 +13,7 @@ import {
   CardFactory,
   CardAction,
   TaskModuleResponse,
-  InvokeResponse
+  InvokeResponse, ConversationReference, TeamsActivityHandler, ConversationParameters, Activity
 } from 'botbuilder';
 import { getEnv } from '@src/utils';
 import { makeLogger } from '@src/logging';
@@ -32,6 +32,7 @@ import {
   saveMessageMetadata,
   getMessageMetadata
 } from '@src/helpers/cache/cache';
+import {getSessionCreds, SessionManagerEnv, startSession} from "@src/helpers/idc/session-helpers";
 export const ERROR_MSG = '***Processing error***';
 const PROCESSING_MSG = '*Processing...*';
 const FEEDBACK_ACK_MSG = '*Thanks for your feedback!*';
@@ -365,16 +366,80 @@ export class QTeamsBot extends ActivityHandler {
       const type = context.activity.conversation.conversationType;
 
       const message = context.activity.text;
-      logger.info(`Message received: ${message}`);
+      logger.debug(`Message received: ${message}`);
       if (isEmpty(message)) {
         logger.error(EMPTY_MESSAGE);
         throw EMPTY_MESSAGE;
       }
 
+      // Validate if the Teams user has a valid IAM session
+      let iamSessionCreds;
+      const teamsUserId = context.activity.from.id;
+      const sessionManagerEnv: SessionManagerEnv = {
+        oidcStateTableName: env.OIDC_STATE_TABLE_NAME,
+        iamSessionCredentialsTableName: env.IAM_SESSION_TABLE_NAME,
+        oidcIdPName: env.OIDC_IDP_NAME,
+        oidcClientId: env.OIDC_CLIENT_ID,
+        oidcClientSecretName: env.OIDC_CLIENT_SECRET_NAME,
+        oidcIssuerUrl: env.OIDC_ISSUER_URL,
+        oidcRedirectUrl: env.OIDC_REDIRECT_URL,
+        kmsKeyArn: env.KMS_KEY_ARN,
+        region: env.AMAZON_Q_REGION,
+        qUserAPIRoleArn: env.Q_USER_API_ROLE_ARN,
+        gatewayIdCAppArn: env.GATEWAY_IDC_APP_ARN
+      };
+      try {
+        logger.debug(`Getting session creds for ${teamsUserId}`);
+        iamSessionCreds = await getSessionCreds(sessionManagerEnv, teamsUserId);
+      } catch (error) {
+        // call sessionManager.startSession() to start a new session
+        logger.error(`Failed to get session: ${error}`);
+        const authorizationURL = await startSession(sessionManagerEnv, teamsUserId);
+
+        // Create sign in button
+        const card = CardFactory.heroCard(
+          'Authentication Required',
+          [],
+          [
+            {
+              type: 'openUrl',
+              title: 'Sign in',
+              value: authorizationURL
+            }
+          ]
+        );
+        const convoParams: ConversationParameters = {
+          members: [context.activity.from],
+          isGroup: false,
+          bot: context.activity.recipient,
+          tenantId: context.activity.conversation.tenantId,
+          activity: null as any,
+          channelData: null
+        };
+        // Post a message to DM (personal messages) to return a teams button for authorization url
+        const botAppId = env.MICROSOFT_APP_ID;
+        await context.adapter.createConversationAsync(
+          botAppId,
+          context.activity.channelId,
+          context.activity.serviceUrl,
+          null as any,
+          convoParams,
+          async (context) => {
+            const conversationReference = TurnContext.getConversationReference(context.activity);
+            await context.adapter.continueConversationAsync(
+              botAppId,
+              conversationReference,
+              async (turnContext) => {
+                await turnContext.sendActivity({attachments: [card]});
+              }
+            );
+          }
+        );
+        return;
+      }
+
       let qUserMessage = message;
       const qAttachments: AttachmentInput[] = [];
-
-      env.AMAZON_Q_USER_ID = await setAmazonQUserId(context, env.AMAZON_Q_USER_ID);
 
       // We cache previous Amazon Q context metadata for personal DM channel
       let channelKey = '';
@@ -440,7 +505,7 @@ export class QTeamsBot extends ActivityHandler {
       const messageResponse = await context.sendActivity(MessageFactory.text(PROCESSING_MSG));
 
       // call ChatSync API
-      const qResponse = await qChatSync(env, qUserMessage, qAttachments, qContext);
+      const qResponse = await qChatSync(env, qUserMessage, qAttachments, iamSessionCreds, qContext);
       if (qResponse instanceof Error) {
         const replyText = `${ERROR_MSG} : *${qResponse.message}*`;
         await context.sendActivity(MessageFactory.text(replyText));
@@ -483,6 +548,79 @@ export class QTeamsBot extends ActivityHandler {
     const systemMessageId = data.systemMessageId;
     logger.debug(`Action: ${action}, systemMessageId: ${systemMessageId}`);
     const env = getEnv(process.env);
+
+    // Validate if the Teams user has a valid IAM session
+    let iamSessionCreds;
+    const teamsUserId = context.activity.from.id;
+    const sessionManagerEnv: SessionManagerEnv = {
+      oidcStateTableName: env.OIDC_STATE_TABLE_NAME,
+      iamSessionCredentialsTableName: env.IAM_SESSION_TABLE_NAME,
+      oidcIdPName: env.OIDC_IDP_NAME,
+      oidcClientId: env.OIDC_CLIENT_ID,
+      oidcClientSecretName: env.OIDC_CLIENT_SECRET_NAME,
+      oidcIssuerUrl: env.OIDC_ISSUER_URL,
+      oidcRedirectUrl: env.OIDC_REDIRECT_URL,
+      kmsKeyArn: env.KMS_KEY_ARN,
+      region: env.AMAZON_Q_REGION,
+      qUserAPIRoleArn: env.Q_USER_API_ROLE_ARN,
+      gatewayIdCAppArn: env.GATEWAY_IDC_APP_ARN
+    };
+    try {
+      logger.debug(`Getting session creds for ${teamsUserId}`);
+      iamSessionCreds = await getSessionCreds(sessionManagerEnv, teamsUserId);
+    } catch (error) {
+      // call sessionManager.startSession() to start a new session
+      logger.error(`Failed to get session: ${error}`);
+      const authorizationURL = await startSession(sessionManagerEnv, teamsUserId);
+
+      // Create sign in button
+      const card = CardFactory.heroCard(
+        'Authentication Required',
+        [],
+        [
+          {
+            type: 'openUrl',
+            title: 'Sign in',
+            value: authorizationURL
+          }
+        ]
+      );
+      const convoParams: ConversationParameters = {
+        members: [context.activity.from],
+        isGroup: false,
+        bot: context.activity.recipient,
+        tenantId: context.activity.conversation.tenantId,
+        activity: null as any,
+        channelData: null
+      };
+      // Post a message to DM (personal messages) to return a teams button for authorization url
+      const botAppId = env.MICROSOFT_APP_ID;
+      await context.adapter.createConversationAsync(
+        botAppId,
+        context.activity.channelId,
+        context.activity.serviceUrl,
+        null as any,
+        convoParams,
+        async (context) => {
+          const conversationReference = TurnContext.getConversationReference(context.activity);
+          await context.adapter.continueConversationAsync(
+            botAppId,
+            conversationReference,
+            async (turnContext) => {
+              await turnContext.sendActivity({attachments: [card]});
+            }
+          );
+        }
+      );
+
+      // return 200 ok message
+      return {
+        status: 200,
+        body: JSON.stringify({
+          body: 'Authorization Required'
+        })
+      };
+    }
     const qResponse = (await getMessageMetadata(systemMessageId, env)) as ChatSyncCommandOutput;
     logger.debug(`Cached QResponse: ${JSON.stringify(qResponse)}`);
     if (action === 'ViewSources') {
@@ -492,10 +630,10 @@ export class QTeamsBot extends ActivityHandler {
       return { status: 200, body: response };
     }
     if (action === 'ThumbsUp' || action === 'ThumbsDown') {
-      env.AMAZON_Q_USER_ID = await setAmazonQUserId(context, env.AMAZON_Q_USER_ID);
       if (!isEmpty(qResponse.conversationId) && !isEmpty(qResponse.systemMessageId)) {
         await qPutFeedbackRequest(
           env,
+          iamSessionCreds,
           {
             conversationId: qResponse.conversationId,
             messageId: qResponse.systemMessageId
