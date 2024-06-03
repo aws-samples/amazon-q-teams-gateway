@@ -12,14 +12,16 @@ import {
   PutFeedbackCommandInput,
   PutFeedbackCommandOutput
 } from '@aws-sdk/client-qbusiness';
+import { Credentials } from 'aws-sdk';
+import { ExpiredTokenException } from '@aws-sdk/client-sts';
 
 const logger = makeLogger('amazon-q-client');
 
 let amazonQClient: QBusinessClient | null = null;
-export const getClient = (env: Env) => {
-  if (amazonQClient === null) {
+export const getClient = (env: Env, iamSessionCreds: Credentials) => {  if (amazonQClient === null) {
     logger.debug(`Initiating AmazonQ client with region ${env.AMAZON_Q_REGION}`);
     amazonQClient = new QBusinessClient({
+      credentials: iamSessionCreds,
       region: env.AMAZON_Q_REGION
     });
   }
@@ -30,6 +32,7 @@ export const qChatSync = async (
   env: Env,
   message: string,
   attachments: AttachmentInput[],
+  iamSessionCreds: Credentials,
   context?: {
     conversationId: string;
     parentMessageId: string;
@@ -41,19 +44,22 @@ export const qChatSync = async (
     // are exceeded.
     const input = {
       applicationId: env.AMAZON_Q_APP_ID,
-      userId: env.AMAZON_Q_USER_ID,
       clientToken: uuid(),
       userMessage: message,
       ...(attachments.length > 0 && { attachments }),
       ...context
     };
     logger.debug(`AmazonQ chatSync input: ${JSON.stringify(input)}`);
-    const response = await getClient(env).send(new ChatSyncCommand(input));
+    const response = await getClient(env, iamSessionCreds).send(new ChatSyncCommand(input));
     logger.debug(`AmazonQ chatSync response: ${JSON.stringify(response)}`);
     return response;
   } catch (error) {
     logger.error(`Caught Exception: ${JSON.stringify(error)}`);
     if (error instanceof Error) {
+      logger.debug(error.stack);
+      if (error instanceof ExpiredTokenException) {
+        logger.error(`Token expired: ${error.message}`);
+      }
       return new Error(error.message);
     } else {
       return new Error(`${JSON.stringify(error)}`);
@@ -63,6 +69,7 @@ export const qChatSync = async (
 
 export const qPutFeedbackRequest = async (
   env: Env,
+  iamSessionCreds: Credentials,
   context: {
     conversationId: string;
     messageId: string;
@@ -72,7 +79,6 @@ export const qPutFeedbackRequest = async (
 ): Promise<PutFeedbackCommandOutput> => {
   const input: PutFeedbackCommandInput = {
     applicationId: env.AMAZON_Q_APP_ID,
-    userId: env.AMAZON_Q_USER_ID,
     ...context,
     messageUsefulness: {
       usefulness: usefulness,
@@ -82,7 +88,7 @@ export const qPutFeedbackRequest = async (
   };
 
   logger.debug(`putFeedbackRequest input ${JSON.stringify(input)}`);
-  const response = await getClient(env).send(new PutFeedbackCommand(input));
+  const response = await getClient(env, iamSessionCreds).send(new PutFeedbackCommand(input));
   logger.debug(`putFeedbackRequest output ${JSON.stringify(response)}`);
 
   return response;
