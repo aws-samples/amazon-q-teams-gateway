@@ -45,11 +45,21 @@ export const getOrThrowIfEmpty = <T>(value: T | undefined, name = 'element') => 
 export const getEnv = (env: NodeJS.ProcessEnv) => ({
   AMAZON_Q_ENDPOINT: env.AMAZON_Q_ENDPOINT,
   AMAZON_Q_APP_ID: getOrThrowIfEmpty(env.AMAZON_Q_APP_ID),
-  AMAZON_Q_USER_ID: env.AMAZON_Q_USER_ID,
   AMAZON_Q_REGION: getOrThrowIfEmpty(env.AMAZON_Q_REGION),
   CONTEXT_DAYS_TO_LIVE: getOrThrowIfEmpty(env.CONTEXT_DAYS_TO_LIVE),
   CACHE_TABLE_NAME: getOrThrowIfEmpty(env.CACHE_TABLE_NAME),
-  MESSAGE_METADATA_TABLE_NAME: getOrThrowIfEmpty(env.MESSAGE_METADATA_TABLE_NAME)
+  MESSAGE_METADATA_TABLE_NAME: getOrThrowIfEmpty(env.MESSAGE_METADATA_TABLE_NAME),
+  OIDC_STATE_TABLE_NAME: getOrThrowIfEmpty(env.OIDC_STATE_TABLE_NAME),
+  IAM_SESSION_TABLE_NAME: getOrThrowIfEmpty(env.IAM_SESSION_CREDENTIALS_TABLE_NAME),
+  OIDC_IDP_NAME: getOrThrowIfEmpty(env.OIDC_IDP_NAME),
+  OIDC_ISSUER_URL: getOrThrowIfEmpty(env.OIDC_ISSUER_URL),
+  OIDC_CLIENT_ID: getOrThrowIfEmpty(env.OIDC_CLIENT_ID),
+  OIDC_CLIENT_SECRET_NAME: getOrThrowIfEmpty(env.OIDC_CLIENT_SECRET_NAME),
+  OIDC_REDIRECT_URL: getOrThrowIfEmpty(env.OIDC_REDIRECT_URL),
+  KMS_KEY_ARN: getOrThrowIfEmpty(env.KEY_ARN),
+  Q_USER_API_ROLE_ARN: getOrThrowIfEmpty(env.Q_USER_API_ROLE_ARN),
+  GATEWAY_IDC_APP_ARN: getOrThrowIfEmpty(env.GATEWAY_IDC_APP_ARN),
+  MICROSOFT_APP_ID: getOrThrowIfEmpty(env.MICROSOFT_APP_ID),
 });
 
 export const getTeamsSecret = async () => {
