@@ -22,7 +22,7 @@ highlighted with a dedicated colour. Delete the placeholder values, they are the
 strings you should expect.
 
 <b><span style="background-color: rgb(179, 179, 179); color: rgb(0, 0, 0)">AMAZON_Q_APP_ID</span></b>: c6dd7f1c-6f...<br>
-<b><span style="background-color: rgb(255, 155, 153); color: rgb(0, 0, 0)">OIDC_SECRET</span></b>: ~op8Q~h_hjID3-HGWu...<br>
+<b><span style="background-color: rgb(255, 155, 153); color: rgb(0, 0, 0)">OIDC_SECRET</span></b>: op8Q~h_hjID3-HGWu...<br>
 <b><span style="background-color: rgb(255, 175, 1); color: rgb(0, 0, 0)">OIDC_URL</span></b>: https://login.microsoftonline.com/8f...5/v2.0<br>
 <b><span style="background-color: rgb(8, 160, 194); color: rgb(0, 0, 0)">OIDC_CLIENT_ID</span></b>: 9d881ada-5882-4fcc...<br>
 <b><span style="background-color: rgb(44, 171, 32); color: rgb(0, 0, 0)">TTI_ARN</span></b>: arn:aws:sso::...:trustedTokenIssuer/ssoins-.../tti-a498f458...<br>
