@@ -20,6 +20,8 @@ https://github.com/aws-samples/amazon-q-teams-gateway/assets/10953374/a9bc5f5c-c
 
 It's easy to deploy in your own AWS Account, and add to your own teams. We show you how below.
 
+<b>Note:</b> For an illustrated guide on setting up the integration using Microsoft Entra ID, [check this walkthrough](./README_ENTRA_ID.md).
+
 ### Features
 - In DMs it responds to all messages
 - Renders answers containing markdown - e.g. headings, lists, bold, italics, tables, etc.
