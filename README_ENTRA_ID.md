@@ -22,14 +22,14 @@ highlighted with a dedicated colour. Delete the placeholder values, they are the
 strings you should expect.
 
 <b><span style="background-color: rgb(179, 179, 179); color: rgb(0, 0, 0)">AMAZON_Q_APP_ID</span></b>: c6dd7f1c-6f...<br>
-<b><span style="background-color: rgb(255, 155, 153); color: rgb(0, 0, 0)">OIDC_SECRET</span></b>: op8Q~h_hjID3-HGWu...<br>
+<b><span style="background-color: rgb(255, 155, 153); color: rgb(0, 0, 0)">OIDC_SECRET</span></b>: op8Qh_hjID3-HGWu...<br>
 <b><span style="background-color: rgb(255, 175, 1); color: rgb(0, 0, 0)">OIDC_URL</span></b>: https://login.microsoftonline.com/8f...5/v2.0<br>
 <b><span style="background-color: rgb(8, 160, 194); color: rgb(0, 0, 0)">OIDC_CLIENT_ID</span></b>: 9d881ada-5882-4fcc...<br>
 <b><span style="background-color: rgb(44, 171, 32); color: rgb(0, 0, 0)">TTI_ARN</span></b>: arn:aws:sso::...:trustedTokenIssuer/ssoins-.../tti-a498f458...<br>
 <b><span style="background-color: rgb(145, 65, 8)">GATEWAY_IDC_ARN</span></b>: arn:aws:sso::...:application/ssoins-.../apl-00702...<br>
 <b><span style="background-color: rgb(255, 63, 255); color: rgb(0, 0, 0)">GATEWAY_CLIENT_ID</span></b>: a5cb05c1-ed51-47...<br>
 <b><span style="background-color: rgb(152, 139, 1); color: rgb(0, 0, 0)">GATEWAY_TENANT_ID</span></b>: 8f15c65e-f8e5-4b...<br>
-<b><span style="background-color: rgb(102, 3, 0)">GATEWAY_SECRET</span></b>: pyd8Q~ZOo_A3...<br>
+<b><span style="background-color: rgb(102, 3, 0)">GATEWAY_SECRET</span></b>: pyd8QZOo_A3...<br>
 
 
 ## Steps
@@ -179,7 +179,7 @@ the permissions you have added, in the status column.<br>
 
     ![](images/entra_id_integration/update_secrets/update_secrets_4.png)<br>
 4. Acknowledge the capabilities and click _Create stack_. Grab a coffee and wait until the creation process has finished
-(takes ~10 minutes).<br>
+(takes about 10 minutes).<br>
 ![](images/entra_id_integration/deploy_cfn/deploy_cfn_2.png)<br>
 5. After the stack is created, go to _Outputs_ and copy the value of the key ending with
 _OIDCCallbackEndpointExportedName_<br>
