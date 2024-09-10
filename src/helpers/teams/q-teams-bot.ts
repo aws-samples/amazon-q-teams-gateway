@@ -505,7 +505,7 @@ export class QTeamsBot extends ActivityHandler {
       const messageResponse = await context.sendActivity(MessageFactory.text(PROCESSING_MSG));
 
       // call ChatSync API
-      const qResponse = await qChatSync(env, qUserMessage, qAttachments, iamSessionCreds, qContext);
+      const qResponse = await qChatSync(env,teamsUserId,qUserMessage, qAttachments, iamSessionCreds, qContext);
       if (qResponse instanceof Error) {
         const replyText = `${ERROR_MSG} : *${qResponse.message}*`;
         await context.sendActivity(MessageFactory.text(replyText));
@@ -633,6 +633,7 @@ export class QTeamsBot extends ActivityHandler {
       if (!isEmpty(qResponse.conversationId) && !isEmpty(qResponse.systemMessageId)) {
         await qPutFeedbackRequest(
           env,
+          teamsUserId,
           iamSessionCreds,
           {
             conversationId: qResponse.conversationId,
