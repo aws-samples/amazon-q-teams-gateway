@@ -17,19 +17,31 @@ import { ExpiredTokenException } from '@aws-sdk/client-sts';
 
 const logger = makeLogger('amazon-q-client');
 
-let amazonQClient: QBusinessClient | null = null;
-export const getClient = (env: Env, iamSessionCreds: Credentials) => {  if (amazonQClient === null) {
-    logger.debug(`Initiating AmazonQ client with region ${env.AMAZON_Q_REGION}`);
-    amazonQClient = new QBusinessClient({
-      credentials: iamSessionCreds,
-      region: env.AMAZON_Q_REGION
-    });
+const amazonQClientByTeamUserId: { [key: string]: QBusinessClient } = {};
+
+export const getClient = (
+  env: Env,
+  teamsUserId: string,
+  iamSessionCreds: Credentials
+) => {
+  logger.debug(`Initiating AmazonQ client with region ${env.AMAZON_Q_REGION}`);
+  if (amazonQClientByTeamUserId[teamsUserId]) {
+    return amazonQClientByTeamUserId[teamsUserId];
   }
-  return amazonQClient;
+
+  const newClient = new QBusinessClient({
+    credentials: iamSessionCreds,
+    region: env.AMAZON_Q_REGION
+  });
+
+  amazonQClientByTeamUserId[teamsUserId] = newClient;
+
+  return newClient;
 };
 
 export const qChatSync = async (
   env: Env,
+  teamsUserId: string,
   message: string,
   attachments: AttachmentInput[],
   iamSessionCreds: Credentials,
@@ -49,8 +61,7 @@ export const qChatSync = async (
       ...(attachments.length > 0 && { attachments }),
       ...context
     };
-    logger.debug(`AmazonQ chatSync input: ${JSON.stringify(input)}`);
-    const response = await getClient(env, iamSessionCreds).send(new ChatSyncCommand(input));
+    const response = await getClient(env,teamsUserId,iamSessionCreds).send(new ChatSyncCommand(input));
     logger.debug(`AmazonQ chatSync response: ${JSON.stringify(response)}`);
     return response;
   } catch (error) {
@@ -69,6 +80,7 @@ export const qChatSync = async (
 
 export const qPutFeedbackRequest = async (
   env: Env,
+  teamsUserId: string,
   iamSessionCreds: Credentials,
   context: {
     conversationId: string;
@@ -88,7 +100,7 @@ export const qPutFeedbackRequest = async (
   };
 
   logger.debug(`putFeedbackRequest input ${JSON.stringify(input)}`);
-  const response = await getClient(env, iamSessionCreds).send(new PutFeedbackCommand(input));
+  const response = await getClient(env,teamsUserId,iamSessionCreds).send(new PutFeedbackCommand(input));
   logger.debug(`putFeedbackRequest output ${JSON.stringify(response)}`);
 
   return response;
