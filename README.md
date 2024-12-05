@@ -1,5 +1,5 @@
 ## Deprecated
-*Q Business Microsoft Teams integration* has been launched during re:invent 2024, please refer the [documentation] (https://docs.aws.amazon.com/amazonq/latest/qbusiness-ug/msteams.html) to know more. This project will no longer be maintained as it duplicates the functionality of official integration.
+*Q Business Microsoft Teams integration* has been launched during re:invent 2024, please refer the [documentation](https://docs.aws.amazon.com/amazonq/latest/qbusiness-ug/msteams.html) to know more. This project will no longer be maintained as it duplicates the functionality of official integration.
 
 # Microsoft Teams gateway for Amazon Q Business
 | :zap: If you created a new Amazon Q Business application on or after April 30th, 2024, you can now set up a Microsoft Teams gateway using the updated instructions provided below. These new Amazon Q Business applications are integrated with IAM Identity Center. The CloudFormation (CFN) template and the necessary steps have been updated to accommodate the setup of the Teams gateway for new applications.
