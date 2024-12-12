@@ -17,24 +17,17 @@ import { ExpiredTokenException } from '@aws-sdk/client-sts';
 
 const logger = makeLogger('amazon-q-client');
 
-const amazonQClientByTeamUserId: { [key: string]: QBusinessClient } = {};
-
 export const getClient = (
   env: Env,
   teamsUserId: string,
   iamSessionCreds: Credentials
 ) => {
   logger.debug(`Initiating AmazonQ client with region ${env.AMAZON_Q_REGION}`);
-  if (amazonQClientByTeamUserId[teamsUserId]) {
-    return amazonQClientByTeamUserId[teamsUserId];
-  }
 
   const newClient = new QBusinessClient({
     credentials: iamSessionCreds,
     region: env.AMAZON_Q_REGION
   });
-
-  amazonQClientByTeamUserId[teamsUserId] = newClient;
 
   return newClient;
 };
